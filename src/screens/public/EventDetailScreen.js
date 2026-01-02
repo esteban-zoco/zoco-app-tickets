@@ -247,12 +247,23 @@ const EventDetailScreen = ({ navigation, route }) => {
   };
 
   const goTab = (tabName, params) => {
-    const parent = navigation.getParent()?.getParent() || navigation.getParent();
-    if (parent) {
+    const parent = navigation.getParent();
+    const root = parent?.getParent?.();
+    const parentRoutes = parent?.getState?.()?.routeNames || [];
+    const rootRoutes = root?.getState?.()?.routeNames || [];
+    if (parentRoutes.includes(tabName)) {
       parent.navigate(tabName, params);
-    } else {
-      navigation.navigate(tabName, params);
+      return;
     }
+    if (rootRoutes.includes(tabName)) {
+      root.navigate(tabName, params);
+      return;
+    }
+    if (rootRoutes.includes("Main")) {
+      root.navigate("Main", { screen: tabName, params });
+      return;
+    }
+    navigation.navigate(tabName, params);
   };
 
   const goAuth = () => {
@@ -638,9 +649,17 @@ const EventDetailScreen = ({ navigation, route }) => {
 
             {uiTicketTypes.map((ticket) => {
               const qty = Number(quantities[ticket.id] || 0);
-              const remainingValue = Number(ticket.remaining);
-              const hasRemaining = Number.isFinite(remainingValue);
-              const soldOut = (hasRemaining && remainingValue <= 0) || ticket.status === false;
+              const hasRemaining =
+                ticket.remaining !== null &&
+                typeof ticket.remaining !== "undefined" &&
+                ticket.remaining !== "";
+              const remainingValue = hasRemaining ? Number(ticket.remaining) : null;
+              const endDate = String(event?.endDate || "").slice(0, 10);
+              const isEnded = endDate ? endDate <= dayjs().format("YYYY-MM-DD") : false;
+              const soldOut =
+                (hasRemaining && Number.isFinite(remainingValue) && remainingValue <= 0) ||
+                ticket.status === false ||
+                isEnded;
               return (
                 <View key={ticket.id} style={[styles.ticketLine, soldOut && styles.ticketLineDisabled]}>
                   <View style={styles.ticketRowTop}>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Screen from "../../components/Screen";
+import MobileHeader from "../../components/MobileHeader";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import AppText from "../../components/AppText";
@@ -50,7 +51,7 @@ const OrganizerEventFormScreen = ({ navigation, route }) => {
   };
 
   return (
-    <Screen contentStyle={styles.container}>
+    <Screen contentStyle={styles.container} header={<MobileHeader />}>
       <View style={styles.card}>
         <AppText weight="bold" style={styles.title}>
           {editingEvent ? "Editar evento" : "Nuevo evento"}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FlatList, Modal, Pressable, StyleSheet, View } from "react-native";
 import Screen from "../../components/Screen";
+import MobileHeader from "../../components/MobileHeader";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import AppText from "../../components/AppText";
@@ -87,7 +88,7 @@ const OrganizerTicketsScreen = () => {
   if (isLoading) return <Loading />;
 
   return (
-    <Screen>
+    <Screen header={<MobileHeader />}>
       <View style={styles.container}>
         <Pressable style={styles.eventSelector} onPress={() => setModalOpen(true)}>
           <AppText weight="semiBold">{selectedEvent?.name || "Seleccionar evento"}</AppText>

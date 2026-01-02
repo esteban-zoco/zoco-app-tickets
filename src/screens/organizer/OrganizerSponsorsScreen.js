@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 import Screen from "../../components/Screen";
+import MobileHeader from "../../components/MobileHeader";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import AppText from "../../components/AppText";
@@ -45,7 +46,7 @@ const OrganizerSponsorsScreen = () => {
   if (isLoading) return <Loading />;
 
   return (
-    <Screen>
+    <Screen header={<MobileHeader />}>
       <View style={styles.container}>
         {status ? <AppText style={styles.status}>{status}</AppText> : null}
         {sponsors.map((sponsor) => (

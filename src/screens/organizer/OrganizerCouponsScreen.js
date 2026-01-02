@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Screen from "../../components/Screen";
+import MobileHeader from "../../components/MobileHeader";
 import Input from "../../components/Input";
 import Button from "../../components/Button";
 import AppText from "../../components/AppText";
@@ -58,7 +59,7 @@ const OrganizerCouponsScreen = () => {
   if (isLoading) return <Loading />;
 
   return (
-    <Screen>
+    <Screen header={<MobileHeader />}>
       <View style={styles.container}>
         <View style={styles.card}>
           <AppText weight="bold" style={styles.title}>

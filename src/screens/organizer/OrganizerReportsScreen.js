@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Screen from "../../components/Screen";
+import MobileHeader from "../../components/MobileHeader";
 import AppText from "../../components/AppText";
 import Loading from "../../components/Loading";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
@@ -33,7 +34,7 @@ const OrganizerReportsScreen = () => {
   if (isLoading) return <Loading />;
 
   return (
-    <Screen>
+    <Screen header={<MobileHeader />}>
       <View style={styles.container}>
         {reports.map((report, index) => (
           <View key={report?.date || index} style={styles.card}>

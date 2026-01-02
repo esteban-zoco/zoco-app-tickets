@@ -1,56 +1,111 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ImageBackground, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, ImageBackground, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import AppText from "./AppText";
 import Button from "./Button";
 import { colors, spacing } from "../theme";
 import { formatDate } from "../utils/format";
 
-const HeroCarousel = ({ slides = [], featuredEvents = [], onPressEvent, showInfoCard = true, height = 220 }) => {
+const HeroCarousel = ({
+  slides = [],
+  featuredEvents = [],
+  onPressEvent,
+  showInfoCard = true,
+  showDots = true,
+  height = 220,
+}) => {
   const [index, setIndex] = useState(0);
   const timer = useRef(null);
+  const listRef = useRef(null);
+  const { width } = useWindowDimensions();
+  const cardGap = spacing.md;
+  const horizontalPadding = spacing.lg;
+  const targetWidth = Math.round(width * 0.84);
+  const maxWidth = width - horizontalPadding * 2;
+  const cardWidth = Math.max(240, Math.min(targetWidth, maxWidth));
 
   useEffect(() => {
-    if (!slides.length) return undefined;
+    if (slides.length <= 1) return undefined;
     timer.current = setInterval(() => {
       setIndex((prev) => (prev + 1) % slides.length);
-    }, 5000);
+    }, 4500);
     return () => clearInterval(timer.current);
-  }, [slides]);
+  }, [slides.length]);
 
-  const activeEvent = featuredEvents.length ? featuredEvents[index % featuredEvents.length] : null;
-  const image = slides[index] || slides[0];
+  useEffect(() => {
+    if (!slides.length) return;
+    setIndex(0);
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [slides.length, cardWidth, cardGap]);
 
-  const canPress = Boolean(onPressEvent && activeEvent);
+  useEffect(() => {
+    if (!slides.length) return;
+    const offset = index * (cardWidth + cardGap);
+    listRef.current?.scrollToOffset({ offset, animated: true });
+  }, [index, slides.length, cardWidth, cardGap]);
 
   return (
     <View style={styles.wrapper}>
-      <Pressable
-        style={[styles.hero, { height }]}
-        onPress={() => {
-          if (canPress) onPressEvent(activeEvent);
+      <FlatList
+        ref={listRef}
+        data={slides}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(_, idx) => `slide-${idx}`}
+        contentContainerStyle={[styles.list, { paddingHorizontal: horizontalPadding }]}
+        snapToInterval={cardWidth + cardGap}
+        snapToAlignment="start"
+        disableIntervalMomentum
+        decelerationRate="fast"
+        scrollEnabled={slides.length > 1}
+        getItemLayout={(_, idx) => ({
+          length: cardWidth + cardGap,
+          offset: (cardWidth + cardGap) * idx,
+          index: idx,
+        })}
+        onMomentumScrollEnd={(event) => {
+          const step = cardWidth + cardGap;
+          const nextIndex = Math.round((event.nativeEvent.contentOffset.x || 0) / step);
+          if (Number.isFinite(nextIndex)) setIndex(nextIndex);
         }}
-        disabled={!canPress}
-      >
-        <ImageBackground source={{ uri: image }} style={StyleSheet.absoluteFillObject} imageStyle={styles.heroImage}>
-          {showInfoCard ? (
-            <LinearGradient colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0.65)"]} style={styles.overlay} />
-          ) : null}
-        </ImageBackground>
-        {showInfoCard && activeEvent ? (
-          <View style={styles.card}>
-            <AppText weight="bold" style={styles.cardTitle} numberOfLines={2}>
-              {activeEvent.name}
-            </AppText>
-            <AppText style={styles.cardMeta}>{formatDate(activeEvent.startDate)}</AppText>
-            <AppText style={styles.cardMeta} numberOfLines={2}>
-              {activeEvent.fulladdress}
-            </AppText>
-            <Button title="Ver tickets" style={styles.cardButton} onPress={() => onPressEvent?.(activeEvent)} />
-          </View>
-        ) : null}
-      </Pressable>
-      {slides.length > 1 ? (
+        onScrollToIndexFailed={(info) => {
+          const offset = info.averageItemLength * info.index;
+          listRef.current?.scrollToOffset({ offset, animated: true });
+        }}
+        ItemSeparatorComponent={() => <View style={{ width: cardGap }} />}
+        renderItem={({ item, index: slideIndex }) => {
+          const event = featuredEvents[slideIndex];
+          const canSlidePress = Boolean(onPressEvent && event);
+          return (
+            <Pressable
+              style={[styles.hero, { height, width: cardWidth }]}
+              onPress={() => {
+                if (canSlidePress) onPressEvent(event);
+              }}
+              disabled={!canSlidePress}
+            >
+              <ImageBackground source={{ uri: item }} style={StyleSheet.absoluteFillObject} imageStyle={styles.heroImage}>
+                {showInfoCard ? (
+                  <LinearGradient colors={["rgba(0,0,0,0.45)", "rgba(0,0,0,0.65)"]} style={styles.overlay} />
+                ) : null}
+              </ImageBackground>
+              {showInfoCard && event ? (
+                <View style={styles.card}>
+                  <AppText weight="bold" style={styles.cardTitle} numberOfLines={2}>
+                    {event.name}
+                  </AppText>
+                  <AppText style={styles.cardMeta}>{formatDate(event.startDate)}</AppText>
+                  <AppText style={styles.cardMeta} numberOfLines={2}>
+                    {event.fulladdress}
+                  </AppText>
+                  <Button title="Ver tickets" style={styles.cardButton} onPress={() => onPressEvent?.(event)} />
+                </View>
+              ) : null}
+            </Pressable>
+          );
+        }}
+      />
+      {showDots && slides.length > 1 ? (
         <View style={styles.dots}>
           {slides.map((_, i) => (
             <View key={`dot-${i}`} style={[styles.dot, i === index && styles.dotActive]} />
@@ -63,8 +118,10 @@ const HeroCarousel = ({ slides = [], featuredEvents = [], onPressEvent, showInfo
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+  },
+  list: {
+    paddingVertical: 0,
   },
   hero: {
     height: 220,

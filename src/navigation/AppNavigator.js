@@ -40,6 +40,7 @@ const SearchStack = createNativeStackNavigator();
 const MyEventsStack = createNativeStackNavigator();
 const AccountStack = createNativeStackNavigator();
 const OrganizerStack = createNativeStackNavigator();
+const OrganizerRolesStack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -85,7 +86,7 @@ const AccountStackScreen = () => (
 );
 
 const OrganizerStackScreen = () => (
-  <OrganizerStack.Navigator screenOptions={screenOptions}>
+  <OrganizerStack.Navigator screenOptions={{ ...screenOptions, headerShown: false }}>
     <OrganizerStack.Screen name="OrganizerDashboard" component={OrganizerDashboardScreen} options={{ title: "Dashboard" }} />
     <OrganizerStack.Screen name="OrganizerEvents" component={OrganizerEventsScreen} options={{ title: "Eventos" }} />
     <OrganizerStack.Screen name="OrganizerEventForm" component={OrganizerEventFormScreen} options={{ title: "Evento" }} />
@@ -100,6 +101,13 @@ const OrganizerStackScreen = () => (
   </OrganizerStack.Navigator>
 );
 
+const OrganizerRolesStackScreen = () => (
+  <OrganizerRolesStack.Navigator screenOptions={{ ...screenOptions, headerShown: false }}>
+    <OrganizerRolesStack.Screen name="OrganizerScanners" component={OrganizerScannersScreen} options={{ title: "Escaneres" }} />
+    <OrganizerRolesStack.Screen name="OrganizerSellers" component={OrganizerSellersScreen} options={{ title: "Vendedores" }} />
+  </OrganizerRolesStack.Navigator>
+);
+
 const AuthStackScreen = () => (
   <AuthStack.Navigator screenOptions={screenOptions}>
     <AuthStack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
@@ -111,12 +119,21 @@ const AuthStackScreen = () => (
 const Tabs = () => {
   const { state } = useAuth();
   const isOrganizer = state.user?.role === "ORGANIZER";
-  const homeComponent = isOrganizer ? OrganizerStackScreen : PublicStackScreen;
+  const tabIconMap = {
+    HomeTab: "home-outline",
+    SearchTab: "search-outline",
+    MyEventsTab: "ticket-outline",
+    AccountTab: "person-outline",
+    OrganizerHomeTab: "home-outline",
+    OrganizerAttendanceTab: "checkbox-outline",
+    OrganizerRolesTab: "people-outline",
+    OrganizerAccountTab: "person-outline",
+  };
 
   return (
     <Tab.Navigator
       key={isOrganizer ? "organizer" : "public"}
-      initialRouteName="HomeTab"
+      initialRouteName={isOrganizer ? "OrganizerHomeTab" : "HomeTab"}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.ink,
@@ -125,28 +142,45 @@ const Tabs = () => {
         tabBarHideOnKeyboard: true,
         tabBarStyle: TAB_BAR_STYLE,
         tabBarIcon: ({ color, size }) => {
-          const map = {
-            HomeTab: "home-outline",
-            SearchTab: "search-outline",
-            MyEventsTab: "ticket-outline",
-            AccountTab: "person-outline",
-          };
-          return <Ionicons name={map[route.name]} size={size} color={color} />;
+          return <Ionicons name={tabIconMap[route.name]} size={size} color={color} />;
         },
       })}
     >
-      <Tab.Screen name="HomeTab" component={homeComponent} options={{ title: "Inicio" }} />
-      <Tab.Screen name="SearchTab" component={SearchStackScreen} options={{ title: "Buscar" }} />
-      <Tab.Screen
-        name="MyEventsTab"
-        component={state.isAuthenticated ? MyEventsStackScreen : AuthRequiredScreen}
-        options={{ title: "Mis eventos" }}
-      />
-      <Tab.Screen
-        name="AccountTab"
-        component={state.isAuthenticated ? AccountStackScreen : AuthRequiredScreen}
-        options={{ title: "Cuenta" }}
-      />
+      {isOrganizer ? (
+        <>
+          <Tab.Screen name="OrganizerHomeTab" component={OrganizerStackScreen} options={{ title: "Panel" }} />
+          <Tab.Screen
+            name="OrganizerAttendanceTab"
+            component={state.isAuthenticated ? OrganizerAttendanceScreen : AuthRequiredScreen}
+            options={{ title: "Asistencia" }}
+          />
+          <Tab.Screen
+            name="OrganizerRolesTab"
+            component={state.isAuthenticated ? OrganizerRolesStackScreen : AuthRequiredScreen}
+            options={{ title: "Roles" }}
+          />
+          <Tab.Screen
+            name="OrganizerAccountTab"
+            component={state.isAuthenticated ? AccountStackScreen : AuthRequiredScreen}
+            options={{ title: "Cuenta" }}
+          />
+        </>
+      ) : (
+        <>
+          <Tab.Screen name="HomeTab" component={PublicStackScreen} options={{ title: "Inicio" }} />
+          <Tab.Screen name="SearchTab" component={SearchStackScreen} options={{ title: "Buscar" }} />
+          <Tab.Screen
+            name="MyEventsTab"
+            component={state.isAuthenticated ? MyEventsStackScreen : AuthRequiredScreen}
+            options={{ title: "Mis eventos" }}
+          />
+          <Tab.Screen
+            name="AccountTab"
+            component={state.isAuthenticated ? AccountStackScreen : AuthRequiredScreen}
+            options={{ title: "Cuenta" }}
+          />
+        </>
+      )}
     </Tab.Navigator>
   );
 };

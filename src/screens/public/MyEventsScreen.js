@@ -31,11 +31,12 @@ const MyEventsScreen = ({ navigation }) => {
 
   const goTab = (tabName) => {
     const parent = navigation.getParent();
-    if (parent) {
-      parent.navigate(tabName);
-    } else {
-      navigation.navigate(tabName);
+    const tabParent = parent?.getParent?.() || parent;
+    if (tabParent) {
+      tabParent.navigate(tabName);
+      return;
     }
+    navigation.navigate(tabName);
   };
 
   useEffect(() => {
@@ -91,11 +92,6 @@ const MyEventsScreen = ({ navigation }) => {
 
   return (
     <Screen scroll={false} style={{ backgroundColor: "#ffffff" }}>
-      <MobileHeader
-        onSearch={() => goTab("SearchTab")}
-        onProfile={() => goTab("AccountTab")}
-        onMenu={() => goTab("MyEventsTab")}
-      />
       <ScrollView
         contentContainerStyle={[styles.container, { paddingBottom: spacing.xl + tabBarHeight }]}
         showsVerticalScrollIndicator={false}
@@ -300,10 +296,9 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   footer: {
-    marginTop: spacing.xl,
+    marginTop: 300,
     alignItems: "flex-start",
     gap: spacing.sm,
-    paddingBottom: spacing.xl,
   },
   footerLogo: {
     width: 110,

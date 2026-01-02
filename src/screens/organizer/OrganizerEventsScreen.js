@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Screen from "../../components/Screen";
+import MobileHeader from "../../components/MobileHeader";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
 import Loading from "../../components/Loading";
@@ -47,7 +48,7 @@ const OrganizerEventsScreen = ({ navigation }) => {
   if (isLoading) return <Loading />;
 
   return (
-    <Screen>
+    <Screen header={<MobileHeader />}>
       <View style={styles.container}>
         <Button title="Crear evento" onPress={() => navigation.navigate("OrganizerEventForm")} />
         {events.map((event) => (

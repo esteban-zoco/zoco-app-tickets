@@ -175,8 +175,11 @@ const HomeScreen = ({ navigation }) => {
   }, [featuredEvents, events]);
 
   const heroSlides = useMemo(() => {
+    const eventSlides = heroEvents.map((ev) => ev?.image).filter(Boolean);
+    if (bannerSlides.length > 1) return bannerSlides;
+    if (eventSlides.length > 1) return eventSlides;
     if (bannerSlides.length) return bannerSlides;
-    return heroEvents.map((ev) => ev?.image).filter(Boolean);
+    return eventSlides;
   }, [bannerSlides, heroEvents]);
 
   const hasFilters =
@@ -210,9 +213,6 @@ const HomeScreen = ({ navigation }) => {
   return (
     <Screen scroll={false} style={{ backgroundColor: "#ffffff" }}>
       <MobileHeader
-        onSearch={() => goTab("SearchTab")}
-        onProfile={() => goTab("AccountTab")}
-        onMenu={() => goTab("MyEventsTab")}
       />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 48 + tabBarHeight }} showsVerticalScrollIndicator={false}>
@@ -221,6 +221,7 @@ const HomeScreen = ({ navigation }) => {
           featuredEvents={heroEvents}
           onPressEvent={handleHeroPress}
           showInfoCard={false}
+          showDots={false}
           height={250}
         />
 
