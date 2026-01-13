@@ -1,5 +1,6 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
+import * as Linking from "expo-linking";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -33,6 +34,7 @@ import OrganizerSellersScreen from "../screens/organizer/OrganizerSellersScreen"
 import OrganizerReportsScreen from "../screens/organizer/OrganizerReportsScreen";
 import OrganizerTicketsScreen from "../screens/organizer/OrganizerTicketsScreen";
 import OrganizerAttendanceScreen from "../screens/organizer/OrganizerAttendanceScreen";
+import PaymentReturnScreen from "../screens/public/PaymentReturnScreen";
 
 const RootStack = createNativeStackNavigator();
 const PublicStack = createNativeStackNavigator();
@@ -48,6 +50,16 @@ const screenOptions = {
   headerTitleStyle: { fontFamily: "Montserrat_700Bold" },
   headerTintColor: colors.ink,
   headerShadowVisible: false,
+  statusBarTranslucent: false,
+};
+
+const linking = {
+  prefixes: [Linking.createURL("/"), "zoco-tickets://"],
+  config: {
+    screens: {
+      PaymentReturn: "payment/:status",
+    },
+  },
 };
 
 const PublicStackScreen = () => (
@@ -191,10 +203,11 @@ const AppNavigator = () => {
   if (state.isLoading) return <Loading />;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="Main" component={Tabs} />
         <RootStack.Screen name="Auth" component={AuthStackScreen} options={{ presentation: "modal" }} />
+        <RootStack.Screen name="PaymentReturn" component={PaymentReturnScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   );

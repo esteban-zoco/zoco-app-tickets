@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Image, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import dayjs from "dayjs";
 import Screen from "../../components/Screen";
@@ -31,6 +32,7 @@ const MyEventDetailScreen = ({ navigation, route }) => {
   const [transferEmail, setTransferEmail] = useState("");
   const [transferError, setTransferError] = useState("");
   const [transferLoading, setTransferLoading] = useState(false);
+  const [qrModalTicket, setQrModalTicket] = useState(null);
   const id = route?.params?.id;
 
   const refreshDetail = async () => {
@@ -192,6 +194,10 @@ const MyEventDetailScreen = ({ navigation, route }) => {
     setTransferModal(true);
   };
 
+  const openQrModal = (ticket, seq) => {
+    setQrModalTicket({ ticket, seq });
+  };
+
   const submitTransfer = async () => {
     const ticketId = transferTicket?.id || transferTicket?._id;
     if (!ticketId) return;
@@ -223,6 +229,16 @@ const MyEventDetailScreen = ({ navigation, route }) => {
       await Linking.openURL(url);
     } catch {}
   };
+
+  const modalTicket = qrModalTicket?.ticket || null;
+  const modalTicketId = modalTicket?.id || modalTicket?._id || "";
+  const modalSeq = qrModalTicket?.seq || modalTicket?.seq || modalTicket?.sequence || "";
+  const modalQrUrl = modalTicketId ? `${apiBase}/api/ticket/qr/ticket/${modalTicketId}.png` : "";
+  const modalStateLabel = modalTicket ? getTicketState(modalTicket) : "";
+  const modalOrderLabel = modalTicket ? getOrderLabel(modalTicket) : "-";
+  const modalDateLabel = startDate.isValid() ? startDate.format("D MMM. - YYYY") : "";
+  const modalTimeLabel = eventTimeRaw ? `${String(eventTimeRaw).slice(0, 5)} hs` : "";
+  const modalMetaLine = [modalDateLabel, modalTimeLabel].filter(Boolean).join(" // ");
 
   return (
     <Screen scroll={false} style={{ backgroundColor: "#ffff" }}>
@@ -295,13 +311,13 @@ const MyEventDetailScreen = ({ navigation, route }) => {
                 return (
                   <View key={ticket?.id || index} style={styles.ticketItem}>
                     <View style={styles.ticketCard}>
-                      <View style={styles.ticketQrBox}>
+                      <Pressable style={styles.ticketQrBox} onPress={() => openQrModal(ticket, seq)}>
                         {ticketId ? (
                           <Image source={{ uri: qrUrl }} style={styles.ticketQr} />
                         ) : (
                           <View style={styles.ticketQrPlaceholder} />
                         )}
-                      </View>
+                      </Pressable>
                       <View style={styles.ticketDivider} />
                       <View style={styles.ticketHeaderRow}>
                         <AppText weight="bold" style={styles.ticketTitle}>
@@ -402,6 +418,46 @@ const MyEventDetailScreen = ({ navigation, route }) => {
                 onPress={submitTransfer}
                 disabled={transferLoading}
               />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={Boolean(qrModalTicket)} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.qrCard}>
+            <View style={styles.qrHeader}>
+              <AppText weight="bold" style={styles.qrTitle}>
+                ENTRADA {modalSeq || 1}
+              </AppText>
+              <Pressable style={styles.qrCloseBtn} onPress={() => setQrModalTicket(null)}>
+                <Ionicons name="close" size={18} color={colors.ink} />
+              </Pressable>
+            </View>
+            <View style={styles.qrBox}>
+              {modalQrUrl ? <Image source={{ uri: modalQrUrl }} style={styles.qrImage} /> : <View style={styles.qrPlaceholder} />}
+            </View>
+            <AppText style={styles.qrHint}>
+              Subi el brillo de tu pantalla y mostra este codigo al personal de acceso. Recorda tener tu DNI a mano.
+            </AppText>
+            <AppText weight="bold" style={styles.qrEventName}>
+              {eventName}
+            </AppText>
+            {modalMetaLine ? <AppText style={styles.qrEventMeta}>{modalMetaLine}</AppText> : null}
+            {eventAddress ? <AppText style={styles.qrEventMeta}>{eventAddress}</AppText> : null}
+            <View style={styles.qrMetaRow}>
+              <View style={styles.qrMetaItem}>
+                <AppText style={styles.qrMetaLabel}>Estado</AppText>
+                <AppText weight="bold" style={styles.qrMetaValue}>
+                  {modalStateLabel}
+                </AppText>
+              </View>
+              <View style={styles.qrMetaItem}>
+                <AppText style={styles.qrMetaLabel}>Orden</AppText>
+                <AppText weight="bold" style={styles.qrMetaValue}>
+                  {modalOrderLabel}
+                </AppText>
+              </View>
             </View>
           </View>
         </View>
@@ -649,6 +705,85 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md,
     justifyContent: "space-between",
+  },
+  qrCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: spacing.lg,
+    width: "100%",
+    maxWidth: 340,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: "#E6E9EF",
+  },
+  qrHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  qrTitle: {
+    fontSize: 16,
+    color: colors.ink,
+  },
+  qrCloseBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E1E4EA",
+  },
+  qrBox: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qrImage: {
+    width: 230,
+    height: 230,
+    resizeMode: "contain",
+    borderRadius: 12,
+    backgroundColor: "#F6F8FA",
+  },
+  qrPlaceholder: {
+    width: 230,
+    height: 230,
+    borderRadius: 12,
+    backgroundColor: "#F0F3F6",
+  },
+  qrHint: {
+    fontSize: 12,
+    color: colors.muted,
+    textAlign: "center",
+  },
+  qrEventName: {
+    fontSize: 15,
+    color: colors.ink,
+    textAlign: "center",
+  },
+  qrEventMeta: {
+    fontSize: 12,
+    color: colors.muted,
+    textAlign: "center",
+  },
+  qrMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+  },
+  qrMetaItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+  },
+  qrMetaLabel: {
+    fontSize: 11,
+    color: colors.muted,
+    textTransform: "uppercase",
+  },
+  qrMetaValue: {
+    fontSize: 13,
+    color: colors.ink,
   },
   center: {
     padding: spacing.xl,

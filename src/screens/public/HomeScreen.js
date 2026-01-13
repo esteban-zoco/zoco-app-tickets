@@ -2,10 +2,27 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useRoute } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import LocationIcon from "../../assets/image/ubicacion 1.svg";
 import CalendarIcon from "../../assets/image/calendario 1.svg";
 import PriceIcon from "../../assets/image/dolar 1.svg";
-import CloseIcon from "../../assets/image/xmarca 1.svg";
+import CardIcon from "../../assets/image/tarjeta-de-credito 1.svg";
+import WalletIcon from "../../assets/image/billetera 1.svg";
+import VisaIcon from "../../assets/image/Cards/campanas copia 12.svg";
+import MaestroIcon from "../../assets/image/Cards/Maestro_2016.svg copia.svg";
+import MastercardIcon from "../../assets/image/Cards/Mastercard-logo.svg copia.svg";
+import AmexIcon from "../../assets/image/Cards/campanas copia 1.svg";
+import ArgenCardIcon from "../../assets/image/Cards/b69b09bc-00db-435c-b79b-fe88d15c121d 1.svg";
+import DinersIcon from "../../assets/image/Cards/logo-Diners-Club-International copia.svg";
+import CabalIcon from "../../assets/image/Cards/campanas copia 2.svg";
+import MpIcon from "../../assets/image/wallets/campanas copia 1.svg";
+import BnaIcon from "../../assets/image/wallets/campanas copia 2.svg";
+import UalaIcon from "../../assets/image/wallets/campanas copia 3.svg";
+import ClaroPayIcon from "../../assets/image/wallets/campanas copia 4.svg";
+import ModoIcon from "../../assets/image/wallets/campanas copia 5.svg";
+import NaranjaIcon from "../../assets/image/wallets/campanas copia 6.svg";
+import PersonalIcon from "../../assets/image/wallets/campanas copia 7.svg";
+import CuentaDniIcon from "../../assets/image/wallets/campanas copia 8.svg";
 import { Calendar } from "react-native-calendars";
 import Screen from "../../components/Screen";
 import MobileHeader from "../../components/MobileHeader";
@@ -32,6 +49,7 @@ const HomeScreen = ({ navigation }) => {
   const [modal, setModal] = useState(null);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [payOpen, setPayOpen] = useState({ cards: false, wallets: false });
 
   useEffect(() => {
     const load = async () => {
@@ -259,7 +277,7 @@ const HomeScreen = ({ navigation }) => {
                 >
                   {active ? (
                     <View style={styles.categoryClose}>
-                      <CloseIcon width={10} height={10} />
+                      <Ionicons name="close" size={12} color={colors.ink} />
                     </View>
                   ) : null}
                   {iconSrc ? (
@@ -301,6 +319,61 @@ const HomeScreen = ({ navigation }) => {
               disabled={isLoadingMore}
             />
           ) : null}
+        </View>
+
+        <View style={styles.paySection}>
+          <AppText weight="bold" style={styles.payTitle}>
+            Ya sabes que evento elegir? Con ZOCO pagalo como quieras
+          </AppText>
+
+          <View style={styles.payCard}>
+            <Pressable
+              style={styles.payCardHeader}
+              onPress={() => setPayOpen((prev) => ({ cards: !prev.cards, wallets: false }))}
+            >
+              <View style={styles.payIconWrap}>
+                <CardIcon width={26} height={26} />
+              </View>
+              <AppText style={styles.payCardTitle}>Tarjetas credito y debito</AppText>
+              <Ionicons name={payOpen.cards ? "chevron-up" : "chevron-down"} size={18} color={colors.muted} />
+            </Pressable>
+            {payOpen.cards ? (
+              <View style={styles.payLogos}>
+                <VisaIcon width={54} height={20} />
+                <MaestroIcon width={40} height={26} />
+                <MastercardIcon width={40} height={26} />
+                <AmexIcon width={54} height={20} />
+                <ArgenCardIcon width={36} height={28} />
+                <DinersIcon width={48} height={24} />
+                <CabalIcon width={50} height={20} />
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.payCard}>
+            <Pressable
+              style={styles.payCardHeader}
+              onPress={() => setPayOpen((prev) => ({ cards: false, wallets: !prev.wallets }))}
+            >
+              <View style={styles.payIconWrap}>
+                <WalletIcon width={26} height={26} />
+              </View>
+              <AppText style={styles.payCardTitle}>Billeteras virtuales</AppText>
+              <Ionicons name={payOpen.wallets ? "chevron-up" : "chevron-down"} size={18} color={colors.muted} />
+            </Pressable>
+            {payOpen.wallets ? (
+              <View style={styles.payLogos}>
+                <MpIcon width={54} height={18} />
+                <BnaIcon width={48} height={18} />
+                <UalaIcon width={46} height={18} />
+                <ClaroPayIcon width={46} height={18} />
+                <ModoIcon width={52} height={18} />
+                <NaranjaIcon width={52} height={18} />
+                <PersonalIcon width={52} height={18} />
+                <CuentaDniIcon width={46} height={18} />
+              </View>
+            ) : null}
+          </View>
         </View>
       </ScrollView>
 
@@ -527,6 +600,53 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginTop: spacing.md,
     width: 120,
+  },
+  paySection: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    gap: spacing.md,
+  },
+  payTitle: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  payCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E6E9EF",
+    padding: spacing.md,
+    shadowColor: "#1F2937",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  payCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  payIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  payCardTitle: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  payLogos: {
+    marginTop: spacing.md,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalBackdrop: {
     flex: 1,
