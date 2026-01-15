@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
-import { colors, spacing } from "../../theme";
+import { colors, fontFamilies, spacing } from "../../theme";
 import { updateUserProfileApi } from "../../services/api";
 import { useAuth } from "../../store/AuthContext";
 
@@ -60,7 +60,10 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <Screen scroll={false} style={{ backgroundColor: "#ffffff" }}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
+        <AppText weight="bold" style={styles.title1}>
+            Mi perfil
+          </AppText>
+        <View style={styles.card}>  
           <View style={styles.titleWrap}>
             <AppText weight="bold" style={styles.title}>
               Datos personales
@@ -132,14 +135,20 @@ const ProfileScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 60,
-    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingHorizontal: 16,
     paddingBottom: 80,
     alignItems: "center",
   },
+  title1: {
+    fontSize: 24,
+    color: colors.ink,
+    paddingBottom: 64,
+    alignSelf: "flex-start",
+  },
   card: {
     width: "100%",
-    maxWidth: 280,
+    maxWidth: 300,
     gap: spacing.md,
   },
   titleWrap: {
@@ -171,6 +180,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.ink,
     backgroundColor: "#ffffff",
+    fontFamily: fontFamilies.regular,
   },
   saveButton: {
     backgroundColor: colors.brand,

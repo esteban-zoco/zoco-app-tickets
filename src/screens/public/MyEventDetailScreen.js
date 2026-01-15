@@ -2,14 +2,16 @@ import React, { useEffect, useState } from "react";
 import { Image, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import dayjs from "dayjs";
 import Screen from "../../components/Screen";
 import MobileHeader from "../../components/MobileHeader";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
 import Loading from "../../components/Loading";
+import RollingQr from "../../components/qr/RollingQr";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
-import { colors, spacing } from "../../theme";
+import { colors, fontFamilies, spacing } from "../../theme";
 import { getMyEventDetailApi, initiateTicketTransferApi } from "../../services/api";
 import { API_BASE_URL } from "../../services/config";
 import { useAuth } from "../../store/AuthContext";
@@ -25,6 +27,7 @@ import RulesCalendarIcon from "../../assets/image/calendario-3 1.svg";
 const MyEventDetailScreen = ({ navigation, route }) => {
   const { state } = useAuth();
   const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
   const [detail, setDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [transferModal, setTransferModal] = useState(false);
@@ -100,6 +103,11 @@ const MyEventDetailScreen = ({ navigation, route }) => {
   const dateLabel = startDate.isValid() ? startDate.format("D MMM. - YYYY") : "";
   const timeLabel = eventTimeRaw ? `${String(eventTimeRaw).slice(0, 5)} hs` : "";
   const metaDate = dateLabel && timeLabel ? `${dateLabel} // ${timeLabel}` : dateLabel || timeLabel;
+  const currentUserId =
+    state?.user?._id ||
+    state?.user?.id ||
+    state?.user?.userid ||
+    "";
 
   const mapQuery = (() => {
     const latRaw = detail?.latitude ?? detail?.lat ?? detail?.event?.latitude;
@@ -119,6 +127,11 @@ const MyEventDetailScreen = ({ navigation, route }) => {
 
   const openEventPage = () => {
     if (!eventId) return;
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.navigate("HomeTab", { screen: "EventDetail", params: { id: eventId } });
+      return;
+    }
     navigation.navigate("EventDetail", { id: eventId });
   };
 
@@ -158,32 +171,82 @@ const MyEventDetailScreen = ({ navigation, route }) => {
     return `#${str.slice(-6)}`;
   };
 
+  const normalizeStatus = (value) => String(value || "").toLowerCase();
+
+  const getTransferMeta = (ticket) => {
+    const statusStrs = [ticket?.status, ticket?.state, ticket?.transferStatus]
+      .map(normalizeStatus)
+      .filter(Boolean);
+    const transferStatusRaw = normalizeStatus(ticket?.transferStatus);
+    const idFrom = (value) => {
+      if (!value) return "";
+      if (typeof value === "object") return String(value._id || value.id || value.userid || "");
+      return String(value);
+    };
+    const ownerCandidates = [
+      ticket?.ownerId,
+      ticket?.ownerid,
+      ticket?.userId,
+      ticket?.userid,
+      ticket?.owner,
+      ticket?.user,
+      ticket?.beneficiary,
+      ticket?.toUser,
+      ticket?.receiver,
+      ticket?.recipient,
+    ];
+    const ownerIds = ownerCandidates.map(idFrom).filter(Boolean);
+    const knownOwnerDifferent =
+      ownerIds.length > 0 && currentUserId && ownerIds.every((id) => id !== String(currentUserId));
+    const legacyPending =
+      ticket?.pendingTransfer === true ||
+      ticket?.transferPending === true ||
+      statusStrs.some((value) => value.includes("pending"));
+    const legacyTransferred =
+      ticket?.transferred === true ||
+      ticket?.isTransferred === true ||
+      ticket?.transfered === true ||
+      ticket?.transfer === true ||
+      statusStrs.some((value) => value.includes("transferred") || value.includes("transfer")) ||
+      knownOwnerDifferent;
+    const fallbackStatus = legacyTransferred ? "transferred" : legacyPending ? "pending" : "";
+    const resolvedStatus = transferStatusRaw || fallbackStatus || "owned";
+    const isTransferred = resolvedStatus === "transferred";
+    const isPending = resolvedStatus === "pending" || resolvedStatus === "incoming";
+    return { resolvedStatus, isTransferred, isPending };
+  };
+
   const eventStart = (() => {
     if (!startDate.isValid()) return null;
     const [hh = "00", mm = "00"] = String(eventTimeRaw || "00:00").split(":");
     return startDate.hour(Number(hh)).minute(Number(mm));
   })();
 
-  const canTransferTicket = (ticket) => {
+  const withinDynamicWindow = (() => {
     if (!eventStart) return false;
     const hoursLeft = eventStart.diff(dayjs(), "hour", true);
-    const within = hoursLeft <= 12 && hoursLeft >= 0;
+    const within12h = hoursLeft <= 12 && hoursLeft >= 0;
     const isActive = dayjs().isAfter(eventStart);
-    const rawStatus = String(ticket?.status || ticket?.state || "").toLowerCase();
-    const transferStatus = String(ticket?.transferStatus || "").toLowerCase();
-    const isRedeemed = rawStatus === "redeemed" || rawStatus === "used" || rawStatus === "consumed";
-    const isTransferred = transferStatus === "transferred" || ticket?.transferred === true || ticket?.isTransferred === true;
-    const isPending = transferStatus === "pending" || transferStatus === "incoming";
-    return (within || isActive) && !isRedeemed && !isTransferred && !isPending;
+    return within12h || isActive;
+  })();
+
+  const isTicketRedeemed = (ticket) => {
+    const rawStatus = normalizeStatus(ticket?.status || ticket?.state);
+    return rawStatus === "redeemed" || rawStatus === "used" || rawStatus === "consumed";
+  };
+
+  const canTransferTicket = (ticket) => {
+    const transferMeta = getTransferMeta(ticket);
+    const isRedeemed = isTicketRedeemed(ticket);
+    return withinDynamicWindow && !isRedeemed && !transferMeta.isTransferred && !transferMeta.isPending;
   };
 
   const getTicketState = (ticket) => {
-    const rawStatus = String(ticket?.status || ticket?.state || "").toLowerCase();
-    const transferStatus = String(ticket?.transferStatus || "").toLowerCase();
+    const rawStatus = normalizeStatus(ticket?.status || ticket?.state);
+    const transferMeta = getTransferMeta(ticket);
     if (rawStatus === "redeemed" || rawStatus === "used" || rawStatus === "consumed") return "Usada";
-    if (transferStatus === "transferred" || ticket?.transferred === true || ticket?.isTransferred === true)
-      return "Transferida";
-    if (transferStatus === "pending" || transferStatus === "incoming") return "Pendiente";
+    if (transferMeta.isTransferred) return "Transferida";
+    if (transferMeta.isPending) return "Pendiente";
     return "Vigente";
   };
 
@@ -194,8 +257,8 @@ const MyEventDetailScreen = ({ navigation, route }) => {
     setTransferModal(true);
   };
 
-  const openQrModal = (ticket, seq) => {
-    setQrModalTicket({ ticket, seq });
+  const openQrModal = (ticket, seq, meta) => {
+    setQrModalTicket({ ticket, seq, meta, within: withinDynamicWindow });
   };
 
   const submitTransfer = async () => {
@@ -233,7 +296,20 @@ const MyEventDetailScreen = ({ navigation, route }) => {
   const modalTicket = qrModalTicket?.ticket || null;
   const modalTicketId = modalTicket?.id || modalTicket?._id || "";
   const modalSeq = qrModalTicket?.seq || modalTicket?.seq || modalTicket?.sequence || "";
-  const modalQrUrl = modalTicketId ? `${apiBase}/api/ticket/qr/ticket/${modalTicketId}.png` : "";
+  const modalMeta = modalTicket ? qrModalTicket?.meta || getTransferMeta(modalTicket) : null;
+  const modalIsRedeemed = modalTicket ? isTicketRedeemed(modalTicket) : false;
+  const modalWithin = qrModalTicket?.within ?? withinDynamicWindow;
+  const modalShowDynamic =
+    Boolean(modalTicketId) &&
+    modalWithin &&
+    modalMeta &&
+    !modalMeta.isTransferred &&
+    !modalMeta.isPending &&
+    !modalIsRedeemed;
+  const modalQrUrl =
+    modalTicketId && !modalShowDynamic && !(modalMeta && modalMeta.isTransferred)
+      ? `${apiBase}/api/ticket/qr/ticket/${modalTicketId}.png`
+      : "";
   const modalStateLabel = modalTicket ? getTicketState(modalTicket) : "";
   const modalOrderLabel = modalTicket ? getOrderLabel(modalTicket) : "-";
   const modalDateLabel = startDate.isValid() ? startDate.format("D MMM. - YYYY") : "";
@@ -241,12 +317,14 @@ const MyEventDetailScreen = ({ navigation, route }) => {
   const modalMetaLine = [modalDateLabel, modalTimeLabel].filter(Boolean).join(" // ");
 
   return (
-    <Screen scroll={false} style={{ backgroundColor: "#ffff" }}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xl + tabBarHeight }]}>
+    <Screen scroll={false} style={{ backgroundColor: "#ffff"  }}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xl + tabBarHeight }]}
+        style={{ marginTop: -insets.top }}
+      >
         <AppText weight="bold" style={styles.pageTitle}>
           Detalles de mi evento
         </AppText>
-
         <View style={styles.detailCard}>
           <View style={styles.hero}>
             <Image
@@ -284,17 +362,17 @@ const MyEventDetailScreen = ({ navigation, route }) => {
               </AppText>
             </View>
 
-            <View style={styles.actionRow}>
-              <Pressable style={styles.actionButton} onPress={openEventPage}>
-                <AppText weight="semiBold" style={styles.actionButtonText}>
-                  Ver pagina del evento
-                </AppText>
-              </Pressable>
-              <Pressable style={styles.actionButton} onPress={openMap}>
-                <AppText weight="semiBold" style={styles.actionButtonText}>
-                  Ver mapa
-                </AppText>
-              </Pressable>
+          <View style={styles.actionRow}>
+            <Pressable style={[styles.actionButton, styles.actionButtonWide]} onPress={openEventPage}>
+              <AppText weight="semiBold" style={styles.actionButtonText}>
+                Ver pagina del evento
+              </AppText>
+            </Pressable>
+            <Pressable style={[styles.actionButton, styles.actionButtonNarrow]} onPress={openMap}>
+              <AppText weight="semiBold" style={styles.actionButtonText}>
+                Ver mapa
+              </AppText>
+            </Pressable>
             </View>
           </View>
         </View>
@@ -305,14 +383,27 @@ const MyEventDetailScreen = ({ navigation, route }) => {
               {tickets.map((ticket, index) => {
                 const ticketId = ticket?.id || ticket?._id;
                 const seq = ticket?.seq || ticket?.sequence || index + 1;
+                const transferMeta = getTransferMeta(ticket);
+                const isRedeemed = isTicketRedeemed(ticket);
+                const showDynamicQr = withinDynamicWindow && !transferMeta.isTransferred;
                 const qrUrl = ticketId ? `${apiBase}/api/ticket/qr/ticket/${ticketId}.png` : "";
                 const stateLabel = getTicketState(ticket);
                 const canTransfer = canTransferTicket(ticket);
+                const isPrintDisabled = transferMeta.isTransferred;
                 return (
                   <View key={ticket?.id || index} style={styles.ticketItem}>
                     <View style={styles.ticketCard}>
-                      <Pressable style={styles.ticketQrBox} onPress={() => openQrModal(ticket, seq)}>
-                        {ticketId ? (
+                      <Pressable
+                        style={styles.ticketQrBox}
+                        onPress={() => openQrModal(ticket, seq, { ...transferMeta, isRedeemed })}
+                      >
+                        {transferMeta.isTransferred ? (
+                          <View style={styles.ticketQrPlaceholder}>
+                            <AppText style={styles.ticketQrPlaceholderText}>Transferido</AppText>
+                          </View>
+                        ) : showDynamicQr && ticketId ? (
+                          <RollingQr ticketId={ticketId} apiBase={apiBase} size={170} style={styles.ticketQrCanvas} />
+                        ) : ticketId ? (
                           <Image source={{ uri: qrUrl }} style={styles.ticketQr} />
                         ) : (
                           <View style={styles.ticketQrPlaceholder} />
@@ -352,7 +443,11 @@ const MyEventDetailScreen = ({ navigation, route }) => {
                         {canTransfer ? "Transferir entrada" : "Entrada no transferible"}
                       </AppText>
                     </Pressable>
-                    <Pressable style={styles.ticketActionSecondary} onPress={() => openPrint(ticket)}>
+                    <Pressable
+                      style={[styles.ticketActionSecondary, isPrintDisabled && styles.ticketActionDisabled]}
+                      onPress={() => !isPrintDisabled && openPrint(ticket)}
+                      disabled={isPrintDisabled}
+                    >
                       <AppText style={styles.ticketActionSecondaryText}>Imprimir entrada</AppText>
                     </Pressable>
                   </View>
@@ -435,7 +530,17 @@ const MyEventDetailScreen = ({ navigation, route }) => {
               </Pressable>
             </View>
             <View style={styles.qrBox}>
-              {modalQrUrl ? <Image source={{ uri: modalQrUrl }} style={styles.qrImage} /> : <View style={styles.qrPlaceholder} />}
+              {modalMeta?.isTransferred ? (
+                <View style={styles.qrPlaceholder}>
+                  <AppText style={styles.qrPlaceholderText}>Transferido</AppText>
+                </View>
+              ) : modalShowDynamic ? (
+                <RollingQr ticketId={modalTicketId} apiBase={apiBase} size={230} style={styles.qrCanvas} />
+              ) : modalQrUrl ? (
+                <Image source={{ uri: modalQrUrl }} style={styles.qrImage} />
+              ) : (
+                <View style={styles.qrPlaceholder} />
+              )}
             </View>
             <AppText style={styles.qrHint}>
               Subi el brillo de tu pantalla y mostra este codigo al personal de acceso. Recorda tener tu DNI a mano.
@@ -468,7 +573,9 @@ const MyEventDetailScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   scroll: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    paddingTop: 0,
     gap: spacing.lg,
   },
   pageTitle: {
@@ -536,16 +643,26 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   actionButton: {
-    flex: 1,
-    height: 36,
+    minHeight: 36,
     borderRadius: 8,
     backgroundColor: colors.ink,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  actionButtonWide: {
+    flex: 1.3,
+  },
+  actionButtonNarrow: {
+    flex: 0.7,
   },
   actionButtonText: {
     color: "#ffffff",
-    fontSize: 12,
+    fontSize: 11,
+    lineHeight: 14,
+    textAlign: "center",
+    flexShrink: 1,
   },
   ticketsSection: {
     marginTop: spacing.xl,
@@ -577,11 +694,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#F6F8FA",
   },
+  ticketQrCanvas: {
+    width: 170,
+    height: 170,
+    borderRadius: 12,
+    backgroundColor: "#F6F8FA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   ticketQrPlaceholder: {
     width: 170,
     height: 170,
     borderRadius: 12,
     backgroundColor: "#F0F3F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ticketQrPlaceholderText: {
+    fontSize: 12,
+    color: colors.muted,
   },
   ticketDivider: {
     height: 1,
@@ -696,6 +827,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 12,
     color: colors.ink,
+    fontFamily: fontFamilies.regular,
   },
   transferError: {
     fontSize: 12,
@@ -745,11 +877,25 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "#F6F8FA",
   },
+  qrCanvas: {
+    width: 230,
+    height: 230,
+    borderRadius: 12,
+    backgroundColor: "#F6F8FA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   qrPlaceholder: {
     width: 230,
     height: 230,
     borderRadius: 12,
     backgroundColor: "#F0F3F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qrPlaceholderText: {
+    fontSize: 12,
+    color: colors.muted,
   },
   qrHint: {
     fontSize: 12,

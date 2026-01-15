@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
-import { colors, spacing } from "../../theme";
+import { colors, fontFamilies, spacing } from "../../theme";
 import { loginApi } from "../../services/api";
 import { useAuth } from "../../store/AuthContext";
 
@@ -156,6 +156,7 @@ const styles = StyleSheet.create({
     borderColor: "#2D3035",
     paddingHorizontal: spacing.md,
     fontSize: 13,
+    fontFamily: fontFamilies.regular,
   },
   passwordRow: {
     flexDirection: "row",

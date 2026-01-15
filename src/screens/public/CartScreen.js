@@ -6,7 +6,7 @@ import Button from "../../components/Button";
 import Loading from "../../components/Loading";
 import EmptyState from "../../components/EmptyState";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
-import { colors, spacing } from "../../theme";
+import { colors, fontFamilies, spacing } from "../../theme";
 import { getCartApi, removeCartApi, updateCartApi } from "../../services/api";
 import { formatCurrency } from "../../utils/format";
 import { useAuth } from "../../store/AuthContext";
@@ -176,6 +176,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     minWidth: 48,
     textAlign: "center",
+    fontFamily: fontFamilies.regular,
   },
   subtotal: {
     fontSize: 14,

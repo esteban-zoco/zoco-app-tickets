@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
-import { colors, spacing } from "../../theme";
+import { colors, fontFamilies, spacing } from "../../theme";
 import { changePasswordApi } from "../../services/api";
 import { useAuth } from "../../store/AuthContext";
 
@@ -39,13 +39,13 @@ const ChangePasswordScreen = ({ navigation }) => {
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Las contrasenas no coinciden.");
+      setError("Las contraseñas no coinciden.");
       return;
     }
     try {
       setSaving(true);
       await changePasswordApi(null, { oldPassword: currentPassword, password: newPassword });
-      setStatus("Contrasena actualizada.");
+      setStatus("Contraseña actualizada.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -62,12 +62,12 @@ const ChangePasswordScreen = ({ navigation }) => {
         <View style={styles.card}>
           <View style={styles.titleWrap}>
             <AppText weight="bold" style={styles.title}>
-              Cambiar contrasena
+              Cambiar contraseña
             </AppText>
           </View>
 
           <View style={styles.field}>
-            <AppText style={styles.label}>Contrasena actual</AppText>
+            <AppText style={styles.label}>Contraseña actual</AppText>
             <View style={styles.inputWrap}>
               <TextInput
                 style={styles.input}
@@ -82,7 +82,7 @@ const ChangePasswordScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.field}>
-            <AppText style={styles.label}>Nueva contrasena</AppText>
+            <AppText style={styles.label}>Nueva contraseña</AppText>
             <View style={styles.inputWrap}>
               <TextInput
                 style={styles.input}
@@ -97,7 +97,7 @@ const ChangePasswordScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.field}>
-            <AppText style={styles.label}>Repetir contrasena</AppText>
+            <AppText style={styles.label}>Repetir contraseña</AppText>
             <View style={styles.inputWrap}>
               <TextInput
                 style={styles.input}
@@ -134,14 +134,14 @@ const ChangePasswordScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 60,
+    paddingTop: 20,
     paddingHorizontal: 24,
-    paddingBottom: 80,
+    paddingBottom: 64,
     alignItems: "center",
   },
   card: {
     width: "100%",
-    maxWidth: 280,
+    maxWidth: 300,
     gap: spacing.md,
   },
   titleWrap: {
@@ -178,6 +178,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.ink,
     backgroundColor: "#ffffff",
+    fontFamily: fontFamilies.regular,
   },
   eyeBtn: {
     position: "absolute",

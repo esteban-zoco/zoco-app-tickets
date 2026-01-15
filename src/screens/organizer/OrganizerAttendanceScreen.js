@@ -7,7 +7,7 @@ import AppText from "../../components/AppText";
 import Loading from "../../components/Loading";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
 import Button from "../../components/Button";
-import { colors, spacing } from "../../theme";
+import { colors, fontFamilies, spacing } from "../../theme";
 import { organizerListEventsApi, organizerScannerAttendeeListApi, organizerScannerEventDetailsApi } from "../../services/api";
 import { useAuth } from "../../store/AuthContext";
 
@@ -479,6 +479,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: colors.ink,
+    fontFamily: fontFamilies.regular,
   },
   filterPill: {
     flexDirection: "row",

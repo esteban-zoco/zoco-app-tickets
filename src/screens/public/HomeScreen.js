@@ -30,7 +30,7 @@ import HeroCarousel from "../../components/HeroCarousel";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
 import EventListItem from "../../components/EventListItem";
-import { colors, spacing } from "../../theme";
+import { colors, fontFamilies, spacing } from "../../theme";
 import { getActiveBannerByCodeApi, getCategory, getFeaturedEvent, getSearchEvent, getState } from "../../services/api";
 
 
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#2D3035",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#D0D5DD",
+    borderColor: "#2D3035",
     backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#ffffff",
-    borderWidth: 1,
+    borderWidth: 0,
     borderColor: "#D0D5DD",
   },
   categoryIcon: {
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginTop: spacing.sm,
     borderWidth: 1,
-    borderColor: "#D0D5DD",
+    borderColor: "#2D3035",
     borderRadius: 20,
     paddingHorizontal: 16,
     height: 32,
@@ -605,6 +605,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginTop: spacing.xl,
     gap: spacing.md,
+    marginBottom: 60,
   },
   payTitle: {
     fontSize: 14,
@@ -660,6 +661,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     maxHeight: "80%",
     gap: spacing.md,
+    paddingBottom: 60,
   },
   modalTitle: {
     fontSize: 16,
@@ -710,6 +712,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.ink,
     paddingVertical: 4,
+    fontFamily: fontFamilies.regular,
   },
 });
 

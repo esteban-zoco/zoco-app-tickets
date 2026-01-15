@@ -6,7 +6,6 @@ import dayjs from "dayjs";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import Loading from "../../components/Loading";
-import MobileHeader from "../../components/MobileHeader";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
 import { colors, spacing } from "../../theme";
 import { getMyEventsApi } from "../../services/api";
@@ -92,10 +91,7 @@ const MyEventsScreen = ({ navigation }) => {
 
   return (
     <Screen scroll={false} style={{ backgroundColor: "#ffffff" }}>
-      <ScrollView
-        contentContainerStyle={[styles.container, { paddingBottom: spacing.xl + tabBarHeight }]}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: spacing.xl + tabBarHeight }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <AppText weight="bold" style={styles.title}>
             Mis eventos
@@ -142,6 +138,7 @@ const MyEventsScreen = ({ navigation }) => {
                     source={image ? { uri: image } : require("../../assets/image/descarga.png")}
                     style={styles.cardImage}
                     imageStyle={styles.cardImageInner}
+                    blurRadius={10}
                   >
                     <LinearGradient
                       colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0.15)", "rgba(0,0,0,0.35)"]}
@@ -208,7 +205,7 @@ const MyEventsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 20,
     gap: spacing.lg,
   },
   header: {
@@ -217,6 +214,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     color: colors.ink,
+    paddingBottom: 24,
   },
   tabs: {
     gap: 8,

@@ -66,7 +66,7 @@ const PublicStackScreen = () => (
   <PublicStack.Navigator screenOptions={screenOptions}>
     <PublicStack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
     <PublicStack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
-    <PublicStack.Screen name="EventDetail" component={EventDetailScreen} options={{ headerShown: false }} />
+    <PublicStack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: "Evento" }} />
     <PublicStack.Screen name="Blog" component={BlogListScreen} options={{ title: "Blog" }} />
     <PublicStack.Screen name="BlogDetail" component={BlogDetailScreen} options={{ title: "Blog" }} />
     <PublicStack.Screen name="Contact" component={ContactScreen} options={{ title: "Contactanos" }} />
@@ -76,24 +76,24 @@ const PublicStackScreen = () => (
 const SearchStackScreen = () => (
   <SearchStack.Navigator screenOptions={screenOptions}>
     <SearchStack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
-    <SearchStack.Screen name="EventDetail" component={EventDetailScreen} options={{ headerShown: false }} />
+    <SearchStack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: "Evento" }} />
   </SearchStack.Navigator>
 );
 
 const MyEventsStackScreen = () => (
   <MyEventsStack.Navigator screenOptions={screenOptions}>
-    <MyEventsStack.Screen name="MyEvents" component={MyEventsScreen} options={{ title: "Mis eventos" }} />
+    <MyEventsStack.Screen name="MyEvents" component={MyEventsScreen} options={{ headerShown: false }} />
     <MyEventsStack.Screen name="MyEventDetail" component={MyEventDetailScreen} options={{ title: "Evento" }} />
     <MyEventsStack.Screen name="TransferAccept" component={TransferAcceptScreen} options={{ title: "Transferencia" }} />
-    <MyEventsStack.Screen name="Profile" component={ProfileScreen} options={{ title: "Mi perfil" }} />
+    <MyEventsStack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
     <MyEventsStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: "Cambiar contraseña" }} />
   </MyEventsStack.Navigator>
 );
 
 const AccountStackScreen = () => (
   <AccountStack.Navigator screenOptions={screenOptions}>
-    <AccountStack.Screen name="Profile" component={ProfileScreen} options={{ title: "Mi perfil" }} />
-    <AccountStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: "Cambiar contraseヵa" }} />
+    <AccountStack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+    <AccountStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: "Cambiar contraseña" }} />
   </AccountStack.Navigator>
 );
 
@@ -153,8 +153,19 @@ const Tabs = () => {
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
         tabBarStyle: TAB_BAR_STYLE,
+        tabBarItemStyle: {
+          width: 48,
+          paddingHorizontal: 0,
+          marginHorizontal: 0,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        tabBarIconStyle: {
+          marginTop: 0,
+        },
         tabBarIcon: ({ color, size }) => {
-          return <Ionicons name={tabIconMap[route.name]} size={size} color={color} />;
+          const iconSize = Math.max(20, size - 4);
+          return <Ionicons name={tabIconMap[route.name]} size={iconSize} color={color} />;
         },
       })}
     >

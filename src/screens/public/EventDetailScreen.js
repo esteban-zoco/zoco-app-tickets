@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,11 +17,10 @@ import TrashIcon from "../../assets/image/eliminar 1.svg";
 import ChevronDownIcon from "../../assets/image/flecha-hacia-abajo-para-navegarBlanca.svg";
 import SadIcon from "../../assets/image/triste 1.svg";
 import Screen from "../../components/Screen";
-import MobileHeader from "../../components/MobileHeader";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
 import Loading from "../../components/Loading";
-import { colors, spacing } from "../../theme";
+import { colors, fontFamilies, spacing } from "../../theme";
 import { createOrderApi, getEventById } from "../../services/api";
 import { PAYMENT_BASE_URL } from "../../services/config";
 import { formatCurrency, formatDate } from "../../utils/format";
@@ -44,6 +44,7 @@ const EventDetailScreen = ({ navigation, route }) => {
   const [selectedInstallment, setSelectedInstallment] = useState("");
   const [showCostDetail, setShowCostDetail] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+  const [geoCoords, setGeoCoords] = useState(null);
   const [cardOpen, setCardOpen] = useState(false);
   const [installmentOpen, setInstallmentOpen] = useState(false);
   const [quantities, setQuantities] = useState({});
@@ -207,6 +208,50 @@ const EventDetailScreen = ({ navigation, route }) => {
     if (coords) return `${coords.lat},${coords.lng}`;
     return address ? encodeURIComponent(address) : "";
   }, [event, address]);
+
+  const mapCoords = useMemo(() => (event ? getCoords(event) : null), [event]);
+
+  useEffect(() => {
+    let isActive = true;
+    const controller = new AbortController();
+
+    const loadCoords = async () => {
+      if (!address || mapCoords) {
+        if (isActive) setGeoCoords(null);
+        return;
+      }
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { "User-Agent": "zoco-tickets" },
+        });
+        const data = await res.json();
+        const first = Array.isArray(data) ? data[0] : null;
+        if (!isActive || !first) return;
+        const lat = Number(first.lat);
+        const lng = Number(first.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          setGeoCoords({ lat, lng });
+        }
+      } catch {}
+    };
+
+    loadCoords();
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
+  }, [address, mapCoords]);
+
+  const previewCoords = mapCoords || geoCoords;
+  const mapPreviewUrl = useMemo(() => {
+    if (!previewCoords) return "";
+    const { lat, lng } = previewCoords;
+    const zoom = 15;
+    const size = "640,320";
+    return `https://static-maps.yandex.ru/1.x/?ll=${lng},${lat}&z=${zoom}&l=map&size=${size}&pt=${lng},${lat},pm2rdm`;
+  }, [previewCoords]);
 
   const cover = useMemo(() => {
     const list = Array.isArray(event?.multipleImage) ? event.multipleImage : [];
@@ -423,6 +468,7 @@ const EventDetailScreen = ({ navigation, route }) => {
         name: state.user?.name || "",
         email: state.user?.email || "",
         phone: state.user?.phone || "",
+        checkoutOrigin: "app",
         items: context.items,
         storeId: selectedCardOption.storeId,
         numberOfInstallments: installmentCount,
@@ -456,7 +502,7 @@ const EventDetailScreen = ({ navigation, route }) => {
 
   useFocusEffect(
     useCallback(() => {
-      const parent = navigation.getParent()?.getParent();
+      const parent = navigation.getParent();
       if (parent) {
         parent.setOptions({ tabBarStyle: { display: "none" } });
       }
@@ -483,24 +529,25 @@ const EventDetailScreen = ({ navigation, route }) => {
 
   return (
     <Screen scroll={false} style={{ backgroundColor: "#fff" }}>
-      <MobileHeader onBack={() => navigation.goBack()} />
-
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: buyBarHeight }]}
         showsVerticalScrollIndicator={false}
+        style={{ marginTop: -insets.top }}
       >
         <View style={styles.card}>
           <View style={styles.hero}>
-            <Image
-              source={cover ? { uri: cover } : require("../../assets/image/homepagemob.png")}
-              style={styles.cover}
-            />
-            <Pressable style={styles.shareBtn} onPress={handleShare}>
-              <ShareIcon width={16} height={16} color="#ffffff" />
-            </Pressable>
-            <Pressable style={styles.igBtn} onPress={openInstagram}>
-              <InstagramIcon width={16} height={16} color="#ffffff" />
-            </Pressable>
+            <View style={styles.heroMedia}>
+              <Image
+                source={cover ? { uri: cover } : require("../../assets/image/homepagemob.png")}
+                style={styles.cover}
+              />
+              <Pressable style={styles.shareBtn} onPress={handleShare}>
+                <ShareIcon width={16} height={16} color="#ffffff" />
+              </Pressable>
+              <Pressable style={styles.igBtn} onPress={openInstagram}>
+                <InstagramIcon width={16} height={16} color="#ffffff" />
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.body}>
@@ -540,9 +587,18 @@ const EventDetailScreen = ({ navigation, route }) => {
               <AppText weight="bold" style={styles.sectionTitle}>
                 Acerca del evento
               </AppText>
-              <AppText style={styles.description} numberOfLines={showInfo ? undefined : 4}>
-                {event.description || "Informacion del evento."}
-              </AppText>
+              <View style={styles.descriptionWrap}>
+                <AppText style={styles.description} numberOfLines={showInfo ? undefined : 4}>
+                  {event.description || "Informacion del evento."}
+                </AppText>
+                {!showInfo ? (
+                  <LinearGradient
+                    colors={["rgba(255,255,255,0)", "#ffffff"]}
+                    style={styles.descriptionFade}
+                    pointerEvents="none"
+                  />
+                ) : null}
+              </View>
               <Pressable style={styles.moreInfoBtn} onPress={() => setShowInfo((v) => !v)}>
                 <ChevronDownIcon width={12} height={12} />
                 <AppText weight="semiBold" style={styles.moreInfoText}>
@@ -563,7 +619,11 @@ const EventDetailScreen = ({ navigation, route }) => {
 
               <View style={styles.mapCard}>
                 <Pressable style={styles.mapPlaceholder} onPress={openMap} disabled={!mapQuery}>
-                  <AppText style={styles.mapText}>{mapQuery ? "Abrir mapa" : "Mapa no disponible"}</AppText>
+                  {mapPreviewUrl ? <Image source={{ uri: mapPreviewUrl }} style={styles.mapImage} /> : null}
+                  {mapPreviewUrl ? <View style={styles.mapOverlay} /> : null}
+                  <AppText style={[styles.mapText, mapPreviewUrl && styles.mapTextOnImage]}>
+                    {mapQuery ? "Abrir mapa" : "Mapa no disponible"}
+                  </AppText>
                 </Pressable>
                 {address ? (
                   <View style={styles.addressRow}>
@@ -842,9 +902,9 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 0,
-    marginHorizontal: 0,
-    marginBottom: 0,
+    borderRadius: 16,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
     overflow: "hidden",
     borderWidth: 0,
     borderColor: "#E7EDF3",
@@ -853,13 +913,16 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   cover: {
-    width: "100%",
+    
     height: 210,
+    borderRadius: 16,
+    marginLeft: 16,
+    marginRight: 16,
   },
   shareBtn: {
     position: "absolute",
     top: 10,
-    right: 10,
+    right: 20,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -870,7 +933,7 @@ const styles = StyleSheet.create({
   igBtn: {
     position: "absolute",
     top: 48,
-    right: 10,
+    right: 20,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -911,6 +974,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
   },
+  descriptionWrap: {
+    position: "relative",
+  },
+  descriptionFade: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 22,
+  },
   moreInfoBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -920,6 +993,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 8,
     width: 120,
+    alignSelf: "center",
   },
   moreInfoText: {
     color: "#ffffff",
@@ -941,9 +1015,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  mapImage: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 12,
+  },
+  mapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.12)",
   },
   mapText: {
     color: colors.muted,
+  },
+  mapTextOnImage: {
+    color: "#ffffff",
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   addressRow: {
     flexDirection: "row",
@@ -986,6 +1075,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     alignItems: "center",
     gap: spacing.sm,
+    marginBottom: 60,
   },
   waitlistTitle: {
     fontSize: 14,
@@ -1011,6 +1101,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: "#ffffff",
     fontSize: 12,
+    fontFamily: fontFamilies.regular,
   },
   waitlistButton: {
     height: 36,
@@ -1046,8 +1137,9 @@ const styles = StyleSheet.create({
   buyButton: {
     backgroundColor: colors.ink,
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 18,
     alignItems: "center",
+    marginBottom: 0,
   },
   buyText: {
     color: colors.brand,
