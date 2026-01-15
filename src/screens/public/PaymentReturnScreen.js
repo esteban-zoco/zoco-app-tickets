@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo } from "react";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
 import { colors, spacing } from "../../theme";
+import SuccessIcon from "../../assets/image/las-compras-en-linea 1.svg";
+import ErrorIcon from "../../assets/image/xmarca 1.svg";
 
 const PaymentReturnScreen = ({ navigation, route }) => {
   const statusRaw = String(route?.params?.status || "").toLowerCase();
@@ -38,42 +40,132 @@ const PaymentReturnScreen = ({ navigation, route }) => {
   };
 
   return (
-    <Screen>
-      <View style={styles.container}>
-        <AppText weight="bold" style={styles.title}>
-          {isSuccess ? "Pago confirmado" : "Pago no confirmado"}
-        </AppText>
-        <AppText style={styles.subtitle}>
-          {isSuccess
-            ? "Gracias. Estamos preparando tus entradas."
-            : "No pudimos confirmar el pago. Podes intentarlo de nuevo."}
-        </AppText>
-        {orderId ? <AppText style={styles.orderId}>Orden: {orderId}</AppText> : null}
-        <Button
-          title={isSuccess ? "Ver mis eventos" : "Volver al inicio"}
-          onPress={handlePrimary}
-        />
-        {!isSuccess ? (
-          <Button title="Mis eventos" variant="ghost" onPress={handleSecondary} />
-        ) : null}
-      </View>
+    <Screen scroll={false} style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.card}>
+          <View style={styles.iconWrap}>
+            {isSuccess ? (
+              <SuccessIcon width={90} height={90} />
+            ) : (
+              <ErrorIcon width={90} height={90} />
+            )}
+          </View>
+          <AppText weight="bold" style={[styles.title, isSuccess ? styles.titleSuccess : styles.titleError]}>
+            {isSuccess ? "Listo! Tu compra fue exitosa" : "Ups! Algo salio mal"}
+          </AppText>
+          <AppText style={[styles.subtitle, isSuccess ? styles.subtitleSuccess : styles.subtitleError]}>
+            {isSuccess
+              ? "En unos segundos te vamos a redirigir a Mis eventos donde vas a poder ver tus tickets."
+              : "El pago no fue aprobado. Podes intentarlo nuevamente."}
+          </AppText>
+          <View style={styles.actions}>
+            <Button
+              title={isSuccess ? "Ir ahora" : "Volver al inicio"}
+              variant="dark"
+              onPress={handlePrimary}
+            />
+            {!isSuccess ? (
+              <Button title="Mis eventos" variant="ghost" onPress={handleSecondary} />
+            ) : null}
+          </View>
+          <View style={styles.note}>
+            <View style={styles.noteIcon}>
+              <AppText weight="bold" style={styles.noteIconText}>i</AppText>
+            </View>
+            <AppText style={styles.noteText}>
+              {isSuccess
+                ? "Recorda que tu QR es dinamico y se actualiza automaticamente. Podras transferir tickets 12hs antes del evento."
+                : "Si el problema persiste, contacta a nuestro soporte."}
+            </AppText>
+          </View>
+          {orderId ? <AppText style={styles.orderId}>Orden: {orderId}</AppText> : null}
+        </View>
+      </ScrollView>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
+  screen: {
+    backgroundColor: "#ffffff",
+  },
   container: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  card: {
+    width: "100%",
+    maxWidth: 560,
+    alignItems: "center",
     gap: spacing.md,
   },
+  iconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+  },
   title: {
-    fontSize: 18,
+    fontSize: 24,
+    textAlign: "center",
+  },
+  titleSuccess: {
+    color: "#BAC819",
+  },
+  titleError: {
+    color: colors.danger,
   },
   subtitle: {
-    color: colors.muted,
+    textAlign: "center",
+    maxWidth: 520,
+  },
+  subtitleSuccess: {
+    color: colors.ink,
+    fontSize: 16,
+  },
+  subtitleError: {
+    color: colors.ink,
+    fontSize: 16,
   },
   orderId: {
     color: colors.ink,
+    marginTop: spacing.sm,
+  },
+  actions: {
+    width: "100%",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  note: {
+    marginTop: spacing.lg,
+    width: "100%",
+    backgroundColor: "#f3f4f6",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  noteIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#e5e7eb",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noteIconText: {
+    fontSize: 12,
+    color: "#6b7280",
+  },
+  noteText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.ink,
+    lineHeight: 18,
   },
 });
 
