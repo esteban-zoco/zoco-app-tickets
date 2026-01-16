@@ -856,7 +856,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 180,
     gap: spacing.lg,
   },
   headerRow: {
@@ -1184,6 +1184,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     maxHeight: "70%",
     gap: spacing.md,
+    paddingBottom: 60,
   },
   modalTitle: {
     fontSize: 16,

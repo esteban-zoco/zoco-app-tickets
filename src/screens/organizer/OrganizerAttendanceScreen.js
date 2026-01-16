@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 160,
     gap: spacing.lg,
   },
   headerBlock: {
@@ -556,6 +556,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     maxHeight: "70%",
     gap: spacing.md,
+    paddingBottom: 60,
   },
   modalTitle: {
     fontSize: 16,
