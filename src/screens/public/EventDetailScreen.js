@@ -707,7 +707,8 @@ const EventDetailScreen = ({ navigation, route }) => {
               </Pressable>
             </View>
 
-            {uiTicketTypes.map((ticket) => {
+            {uiTicketTypes.map((ticket, index) => {
+              const isLast = index === uiTicketTypes.length - 1;
               const qty = Number(quantities[ticket.id] || 0);
               const hasRemaining =
                 ticket.remaining !== null &&
@@ -721,7 +722,14 @@ const EventDetailScreen = ({ navigation, route }) => {
                 ticket.status === false ||
                 isEnded;
               return (
-                <View key={ticket.id} style={[styles.ticketLine, soldOut && styles.ticketLineDisabled]}>
+                <View
+                  key={ticket.id}
+                  style={[
+                    styles.ticketLine,
+                    soldOut && styles.ticketLineDisabled,
+                    isLast && styles.ticketLineLast,
+                  ]}
+                >
                   <View style={styles.ticketRowTop}>
                     <AppText weight="semiBold" style={styles.ticketName}>
                       {ticket.name}
@@ -1176,6 +1184,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#ECEFF4",
     gap: 8,
+  },
+  ticketLineLast: {
+    borderBottomWidth: 0,
   },
   ticketLineDisabled: {
     opacity: 0.6,

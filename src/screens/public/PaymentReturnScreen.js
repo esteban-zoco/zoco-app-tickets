@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Image, ScrollView, StyleSheet, View } from "react-native";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
 import { colors, spacing } from "../../theme";
 import SuccessIcon from "../../assets/image/las-compras-en-linea 1.svg";
 import ErrorIcon from "../../assets/image/xmarca 1.svg";
+
+const logo = require("../../assets/image/logo.e3c0b2196cc23f84f67a.png");
 
 const PaymentReturnScreen = ({ navigation, route }) => {
   const statusRaw = String(route?.params?.status || "").toLowerCase();
@@ -23,7 +25,7 @@ const PaymentReturnScreen = ({ navigation, route }) => {
         return;
       }
       navigation.navigate("Main", { screen: "HomeTab" });
-    }, 1200);
+    }, 10000);
     return () => clearTimeout(timer);
   }, [isSuccess, navigation]);
 
@@ -41,6 +43,9 @@ const PaymentReturnScreen = ({ navigation, route }) => {
 
   return (
     <Screen scroll={false} style={styles.screen}>
+      <View style={styles.header}>
+        <Image source={logo} style={styles.logo} resizeMode="contain" />
+      </View>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.card}>
           <View style={styles.iconWrap}>
@@ -89,9 +94,18 @@ const styles = StyleSheet.create({
   screen: {
     backgroundColor: "#ffffff",
   },
+  header: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
+    alignItems: "center",
+  },
+  logo: {
+    width: 120,
+    height: 30,
+  },
   container: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
+    paddingVertical: 100,
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",

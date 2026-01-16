@@ -2,7 +2,11 @@
   "expo": {
     "name": "Zoco tickets",
     "slug": "zoco-tickets",
-    "scheme": "zoco-tickets",
+    "scheme": [
+      "zoco-tickets",
+      "com.men7ar31.zocotickets",
+      "com.googleusercontent.apps.797217195434-rjo50ea0tdqq6krpvpu920169ms78gvq"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -29,6 +33,11 @@
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "182aa120-4aaf-42af-9771-9b87c9edebd2"
+      }
+    }
   }
 }

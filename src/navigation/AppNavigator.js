@@ -123,7 +123,7 @@ const OrganizerRolesStackScreen = () => (
 const AuthStackScreen = () => (
   <AuthStack.Navigator screenOptions={screenOptions}>
     <AuthStack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-    <AuthStack.Screen name="Register" component={RegisterScreen} options={{ title: "Crear cuenta" }} />
+    <AuthStack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
     <AuthStack.Screen name="Forgot" component={ForgotPasswordScreen} options={{ title: "Recuperar contraseña" }} />
   </AuthStack.Navigator>
 );
@@ -213,11 +213,14 @@ const AppNavigator = () => {
 
   if (state.isLoading) return <Loading />;
 
+  const initialRouteName = state.isAuthenticated ? "Main" : "Auth";
+  const authOptions = state.isAuthenticated ? { presentation: "modal" } : undefined;
+
   return (
-    <NavigationContainer linking={linking}>
-      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <NavigationContainer linking={linking} key={state.isAuthenticated ? "auth" : "guest"}>
+      <RootStack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
         <RootStack.Screen name="Main" component={Tabs} />
-        <RootStack.Screen name="Auth" component={AuthStackScreen} options={{ presentation: "modal" }} />
+        <RootStack.Screen name="Auth" component={AuthStackScreen} options={authOptions} />
         <RootStack.Screen name="PaymentReturn" component={PaymentReturnScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
