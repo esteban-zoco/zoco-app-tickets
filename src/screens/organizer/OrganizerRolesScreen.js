@@ -356,7 +356,7 @@ const OrganizerRolesScreen = ({ initialTab, route }) => {
                         <Ionicons
                           name={isExpanded ? "chevron-up" : "chevron-down"}
                           size={14}
-                          color={colors.ink}
+                          color="#ffffff"
                         />
                       </View>
                       <View>
@@ -364,11 +364,6 @@ const OrganizerRolesScreen = ({ initialTab, route }) => {
                         <AppText style={styles.metaText}>{item.name || "-"}</AppText>
                       </View>
                     </View>
-                    <Ionicons
-                      name={isExpanded ? "chevron-up" : "chevron-down"}
-                      size={14}
-                      color={colors.muted}
-                    />
                   </Pressable>
                   {isExpanded ? (
                     <View style={styles.scannerDetails}>
@@ -684,7 +679,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#eef1f6",
+    backgroundColor: "#2d3035",
     alignItems: "center",
     justifyContent: "center",
   },
