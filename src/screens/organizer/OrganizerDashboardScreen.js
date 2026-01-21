@@ -1140,8 +1140,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   activityIcon: {
-    width: 26,
-    height: 26,
+    width: 30,
+    height: 30,
     borderRadius: 13,
     backgroundColor: "#2f343a",
     alignItems: "center",

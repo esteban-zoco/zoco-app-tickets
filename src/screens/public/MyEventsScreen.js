@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useFocusEffect } from "@react-navigation/native";
 import dayjs from "dayjs";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
@@ -27,6 +28,8 @@ const MyEventsScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState("todos");
   const footerLinks = ["Eventos", "Politica de Privacidad", "Terminos y Condiciones", "Necesitas soporte?"];
+  const hasLoadedRef = useRef(false);
+  const isFetchingRef = useRef(false);
 
   const goTab = (tabName) => {
     const parent = navigation.getParent();
@@ -38,20 +41,39 @@ const MyEventsScreen = ({ navigation }) => {
     navigation.navigate(tabName);
   };
 
-  useEffect(() => {
-    if (!state.isAuthenticated) return;
-    (async () => {
+  const loadEvents = useCallback(
+    async ({ showLoader = false } = {}) => {
+      if (!state.isAuthenticated || isFetchingRef.current) return;
+      isFetchingRef.current = true;
+      if (showLoader) setIsLoading(true);
       try {
-        setIsLoading(true);
         const res = await getMyEventsApi();
         setEvents(res?.data?.info || []);
       } catch (err) {
         console.error(err);
       } finally {
-        setIsLoading(false);
+        if (showLoader) setIsLoading(false);
+        isFetchingRef.current = false;
       }
-    })();
+    },
+    [state.isAuthenticated]
+  );
+
+  useEffect(() => {
+    if (state.isAuthenticated) return;
+    hasLoadedRef.current = false;
+    setEvents([]);
+    setIsLoading(true);
   }, [state.isAuthenticated]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!state.isAuthenticated) return;
+      const showLoader = !hasLoadedRef.current;
+      loadEvents({ showLoader });
+      hasLoadedRef.current = true;
+    }, [state.isAuthenticated, loadEvents])
+  );
 
   const withStatus = useMemo(() => {
     const now = dayjs();

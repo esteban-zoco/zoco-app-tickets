@@ -8,6 +8,7 @@ import MobileHeader from "../../components/MobileHeader";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
 import EventListItem from "../../components/EventListItem";
+import Loading from "../../components/Loading";
 import { colors, fontFamilies, spacing } from "../../theme";
 import { getCity, getSearchEvent } from "../../services/api";
 import { formatDate } from "../../utils/format";
@@ -20,6 +21,7 @@ const SearchScreen = ({ navigation }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedCity, setSelectedCity] = useState(null);
   const [modal, setModal] = useState(null);
+  const [isEventsLoading, setIsEventsLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
@@ -34,6 +36,7 @@ const SearchScreen = ({ navigation }) => {
   }, []);
 
   const fetchEvents = async () => {
+    setIsEventsLoading(true);
     try {
       const all = [];
       const seen = new Set();
@@ -64,6 +67,8 @@ const SearchScreen = ({ navigation }) => {
       setEvents(all);
     } catch (err) {
       console.error("Search events error", err);
+    } finally {
+      setIsEventsLoading(false);
     }
   };
 
@@ -126,6 +131,10 @@ const SearchScreen = ({ navigation }) => {
 
   const dateLabel = selectedDate ? formatDate(selectedDate, "DD.MM") : "Fecha";
   const cityLabel = selectedCity?.name || "Ciudad";
+
+  if (isEventsLoading) {
+    return <Loading />;
+  }
 
   return (
     <Screen scroll={false} style={styles.screen}>

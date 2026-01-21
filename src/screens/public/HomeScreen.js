@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useRoute } from "@react-navigation/native";
@@ -30,8 +30,10 @@ import HeroCarousel from "../../components/HeroCarousel";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
 import EventListItem from "../../components/EventListItem";
+import Loading from "../../components/Loading";
 import { colors, fontFamilies, spacing } from "../../theme";
 import { getActiveBannerByCodeApi, getCategory, getFeaturedEvent, getSearchEvent, getState } from "../../services/api";
+import { TAB_BAR_STYLE } from "../../navigation/tabBarStyle";
 
 
 const HomeScreen = ({ navigation }) => {
@@ -50,8 +52,19 @@ const HomeScreen = ({ navigation }) => {
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [payOpen, setPayOpen] = useState({ cards: false, wallets: false });
+  const [isHomeDataLoaded, setIsHomeDataLoaded] = useState(false);
+  const [isEventsLoaded, setIsEventsLoaded] = useState(false);
+  const isSplashVisible = !isHomeDataLoaded || !isEventsLoaded;
+
+  useLayoutEffect(() => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.setOptions({ tabBarStyle: isSplashVisible ? { display: "none" } : TAB_BAR_STYLE });
+    }
+  }, [navigation, isSplashVisible]);
 
   useEffect(() => {
+    let isMounted = true;
     const load = async () => {
       try {
         const [featuredRes, categoryRes, statesRes, bannerRes] = await Promise.all([
@@ -76,9 +89,14 @@ const HomeScreen = ({ navigation }) => {
         }
       } catch (err) {
         console.error("Home load error", err);
+      } finally {
+        if (isMounted) setIsHomeDataLoaded(true);
       }
     };
     load();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -179,6 +197,7 @@ const HomeScreen = ({ navigation }) => {
     } catch (err) {
       console.error(err);
     } finally {
+      setIsEventsLoaded(true);
       setIsLoadingMore(false);
     }
   };
@@ -227,6 +246,10 @@ const HomeScreen = ({ navigation }) => {
     const id = event._id || event.id;
     if (id) navigation.navigate("EventDetail", { id });
   };
+
+  if (!isHomeDataLoaded || !isEventsLoaded) {
+    return <Loading variant="splash" />;
+  }
 
   return (
     <Screen scroll={false} style={{ backgroundColor: "#ffffff" }}>

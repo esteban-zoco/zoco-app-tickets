@@ -26,7 +26,9 @@ const LoginScreen = ({ navigation }) => {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+  const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const googleFallbackClientId = googleIosClientId || googleWebClientId || googleAndroidClientId || "";
   const googleAndroidScheme = googleAndroidClientId
     ? `com.googleusercontent.apps.${googleAndroidClientId.replace(".apps.googleusercontent.com", "")}`
     : null;
@@ -36,7 +38,9 @@ const LoginScreen = ({ navigation }) => {
       : AuthSession.makeRedirectUri({ scheme: "zoco-tickets", path: "oauthredirect" });
   const [googleRequest, googleResponse, promptGoogleLogin] = Google.useAuthRequest({
     androidClientId: googleAndroidClientId,
+    iosClientId: googleIosClientId,
     webClientId: googleWebClientId,
+    clientId: googleFallbackClientId,
     scopes: ["profile", "email"],
     extraParams: { prompt: "select_account" },
     redirectUri: googleRedirectUri,
@@ -146,8 +150,14 @@ const LoginScreen = ({ navigation }) => {
 
   const handleGoogleLogin = async () => {
     if (!googleRequest) return;
-    if (!googleAndroidClientId && !googleWebClientId) {
-      setError("Falta configurar Google Client ID.");
+    const missingClientId =
+      Platform.OS === "ios"
+        ? !googleIosClientId
+        : Platform.OS === "android"
+          ? !googleAndroidClientId
+          : !googleWebClientId;
+    if (missingClientId) {
+      setError("Falta configurar Google Client ID para esta plataforma.");
       return;
     }
     setError("");

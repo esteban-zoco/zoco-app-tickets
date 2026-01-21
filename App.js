@@ -14,7 +14,7 @@ export default function App() {
     Montserrat_700Bold,
   });
 
-  if (!fontsLoaded) return <Loading />;
+  if (!fontsLoaded) return <Loading variant="splash" />;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
