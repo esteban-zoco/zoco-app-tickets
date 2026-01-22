@@ -32,10 +32,15 @@ const LoginScreen = ({ navigation }) => {
   const googleAndroidScheme = googleAndroidClientId
     ? `com.googleusercontent.apps.${googleAndroidClientId.replace(".apps.googleusercontent.com", "")}`
     : null;
+  const googleIosScheme = googleIosClientId
+    ? `com.googleusercontent.apps.${googleIosClientId.replace(".apps.googleusercontent.com", "")}`
+    : null;
   const googleRedirectUri =
     Platform.OS === "android" && googleAndroidScheme
       ? `${googleAndroidScheme}:/oauth2redirect`
-      : AuthSession.makeRedirectUri({ scheme: "zoco-tickets", path: "oauthredirect" });
+      : Platform.OS === "ios" && googleIosScheme
+        ? `${googleIosScheme}:/oauth2redirect`
+        : AuthSession.makeRedirectUri({ scheme: "zoco-tickets", path: "oauthredirect" });
   const [googleRequest, googleResponse, promptGoogleLogin] = Google.useAuthRequest({
     androidClientId: googleAndroidClientId,
     iosClientId: googleIosClientId,
@@ -208,7 +213,7 @@ const LoginScreen = ({ navigation }) => {
         </AppText>
         <View style={styles.inlineRow}>
           <AppText>No tenes cuenta?</AppText>
-          <AppText style={styles.link} onPress={() => navigation.navigate("Register")}>
+          <AppText style={styles.link2} onPress={() => navigation.navigate("Register")}>
             Registrate
           </AppText>
         </View>
@@ -296,9 +301,17 @@ const styles = StyleSheet.create({
     borderColor: colors.brand,
   },
   link: {
+    marginTop: spacing.xl,
     color: colors.ink,
     textAlign: "center",
     fontWeight: "600",
+    fontFamily: fontFamilies.semiBold,
+  },
+    link2: {
+    color: colors.ink,
+    textAlign: "center",
+    fontWeight: "600",
+    fontFamily: fontFamilies.semiBold,
   },
   inlineRow: {
     flexDirection: "row",

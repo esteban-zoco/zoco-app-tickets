@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
 import { colors, fontFamilies, spacing } from "../../theme";
-import { updateUserProfileApi } from "../../services/api";
+import { changePasswordApi, updateUserProfileApi } from "../../services/api";
 import { useAuth } from "../../store/AuthContext";
 
-const ProfileScreen = ({ navigation }) => {
+const ProfileScreen = () => {
   const { state, updateUser, signOut } = useAuth();
   const [form, setForm] = useState({ name: "", email: "", dni: "" });
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     setForm({
@@ -24,15 +29,6 @@ const ProfileScreen = ({ navigation }) => {
 
   if (!state.isAuthenticated) return <AuthRequiredScreen />;
 
-  const goHome = () => {
-    const parent = navigation.getParent();
-    if (parent) {
-      parent.navigate("HomeTab");
-    } else {
-      navigation.navigate("Home");
-    }
-  };
-
   const onSave = async () => {
     setStatus("");
     setError("");
@@ -41,14 +37,57 @@ const ProfileScreen = ({ navigation }) => {
       setError("El DNI debe tener 8 digitos (solo numeros).");
       return;
     }
+    const wantsPasswordChange = Boolean(currentPassword || newPassword || confirmPassword);
+    if (wantsPasswordChange) {
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        setError("Completa todos los campos de contraseña.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError("Las contraseñas no coinciden.");
+        return;
+      }
+    }
     try {
       setSaving(true);
+      let profileOk = false;
+      let passwordOk = false;
+      const errors = [];
       const payload = { ...form, dni: dniClean };
-      const res = await updateUserProfileApi(null, payload);
-      if (res?.status === 200) {
-        const updated = res?.data?.info?.user || payload;
-        await updateUser(updated);
+      try {
+        const res = await updateUserProfileApi(null, payload);
+        if (res?.status === 200) {
+          const updated = res?.data?.info?.user || payload;
+          await updateUser(updated);
+          profileOk = true;
+        } else {
+          errors.push("No se pudo actualizar el perfil.");
+        }
+      } catch (err) {
+        errors.push("No se pudo actualizar el perfil.");
+      }
+
+      if (wantsPasswordChange) {
+        try {
+          await changePasswordApi(null, { oldPassword: currentPassword, password: newPassword });
+          passwordOk = true;
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        } catch (err) {
+          errors.push("No se pudo actualizar la contraseña.");
+        }
+      }
+
+      if (errors.length) {
+        setError(errors.join(" "));
+      }
+      if (profileOk && passwordOk) {
+        setStatus("Listo! Actualizamos tus datos y contraseña.");
+      } else if (profileOk) {
         setStatus("Listo! Actualizamos tus datos personales.");
+      } else if (passwordOk) {
+        setStatus("Contraseña actualizada.");
       }
     } catch (err) {
       setError("No se pudo actualizar.");
@@ -60,10 +99,7 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <Screen scroll={false} style={{ backgroundColor: "#ffffff" }}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <AppText weight="bold" style={styles.title1}>
-            Mi perfil
-          </AppText>
-        <View style={styles.card}>  
+        <View style={styles.card}>
           <View style={styles.titleWrap}>
             <AppText weight="bold" style={styles.title}>
               Datos personales
@@ -105,6 +141,42 @@ const ProfileScreen = ({ navigation }) => {
             />
           </View>
 
+          <Pressable style={styles.toggleRow} onPress={() => setPasswordOpen((prev) => !prev)}>
+            <Ionicons
+              name={passwordOpen ? "chevron-down" : "chevron-forward"}
+              size={16}
+              color={colors.muted}
+            />
+            <AppText style={styles.toggleText}>Cambiar contraseña</AppText>
+          </Pressable>
+
+          {passwordOpen ? (
+            <>
+              <View style={styles.field}>
+                <AppText style={styles.label}>Contraseña actual</AppText>
+                <TextInput
+                  style={styles.input}
+                  secureTextEntry
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                />
+              </View>
+              <View style={styles.field}>
+                <AppText style={styles.label}>Contraseña nueva</AppText>
+                <TextInput style={styles.input} secureTextEntry value={newPassword} onChangeText={setNewPassword} />
+              </View>
+              <View style={styles.field}>
+                <AppText style={styles.label}>Repetir contraseña</AppText>
+                <TextInput
+                  style={styles.input}
+                  secureTextEntry
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
+              </View>
+            </>
+          ) : null}
+
           {error ? <AppText style={styles.error}>{error}</AppText> : null}
           {status ? <AppText style={styles.status}>{status}</AppText> : null}
 
@@ -114,18 +186,8 @@ const ProfileScreen = ({ navigation }) => {
             </AppText>
           </Pressable>
 
-          <Pressable style={styles.linkButton} onPress={() => navigation.navigate("ChangePassword")}>
-            <AppText style={styles.linkText}>Cambiar contrasena</AppText>
-          </Pressable>
           <Pressable style={styles.linkButton} onPress={signOut}>
             <AppText style={[styles.linkText, styles.logoutText]}>Cerrar sesion</AppText>
-          </Pressable>
-
-          <Pressable style={styles.backRow} onPress={goHome}>
-            <AppText style={styles.backText}>
-              <AppText style={styles.backArrow}>{"<"}</AppText> Volver a{" "}
-              <AppText style={styles.backLink}>Eventos</AppText>
-            </AppText>
           </Pressable>
         </View>
       </ScrollView>
@@ -135,16 +197,10 @@ const ProfileScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 20,
+    paddingTop: 32,
     paddingHorizontal: 16,
-    paddingBottom: 80,
+    paddingBottom: 60,
     alignItems: "center",
-  },
-  title1: {
-    fontSize: 24,
-    color: colors.ink,
-    paddingBottom: 64,
-    alignSelf: "flex-start",
   },
   card: {
     width: "100%",
@@ -171,6 +227,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.ink,
   },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  toggleText: {
+    color: "#2D3035",
+    fontSize: 14,
+    fontFamily: fontFamilies.semiBold,
+  },
   input: {
     height: 40,
     borderRadius: 5,
@@ -183,7 +250,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.regular,
   },
   saveButton: {
-    backgroundColor: colors.brand,
+    backgroundColor: "#2D3035",
     borderRadius: 5,
     height: 35,
     alignItems: "center",
@@ -192,14 +259,15 @@ const styles = StyleSheet.create({
   },
   saveText: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 14,
   },
   linkButton: {
     alignItems: "center",
+    marginTop: 6,
   },
   linkText: {
-    color: colors.ink,
-    fontSize: 13,
+    color: colors.danger,
+    fontSize: 12,
   },
   logoutText: {
     color: colors.danger,
@@ -213,20 +281,6 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 12,
     textAlign: "center",
-  },
-  backRow: {
-    marginTop: 30,
-    alignItems: "center",
-  },
-  backText: {
-    color: colors.muted,
-    fontSize: 12,
-  },
-  backArrow: {
-    color: colors.muted,
-  },
-  backLink: {
-    color: colors.brand,
   },
 });
 

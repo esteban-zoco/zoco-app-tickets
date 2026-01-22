@@ -5,15 +5,16 @@
     "scheme": [
       "zoco-tickets",
       "com.men7ar31.zocotickets",
+      "com.googleusercontent.apps.797217195434-g2dobe5umeho2bgj8tsd56ogkjnhkb55",
       "com.googleusercontent.apps.797217195434-rjo50ea0tdqq6krpvpu920169ms78gvq"
     ],
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/store/logo.png",
+    "icon": "./assets/store/logo.jpg",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/store/logo.png",
+      "image": "./assets/store/playstore-scanner-31.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -26,14 +27,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/store/logo.png",
+        "foregroundImage": "./assets/store/logo.jpg",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.men7ar31.zocotickets"
     },
     "web": {
-      "favicon": "./assets/store/logo.png"
+      "favicon": "./assets/store/logo.jpg"
     },
     "plugins": [
       "expo-font"

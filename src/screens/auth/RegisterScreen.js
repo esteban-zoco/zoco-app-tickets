@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: 80,
     paddingBottom: spacing.xl,
     alignItems: "center",
     gap: spacing.lg,
@@ -465,6 +465,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 36,
     marginTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
   card: {
     width: "100%",
@@ -482,8 +483,8 @@ const styles = StyleSheet.create({
   },
   subtext: {
     textAlign: "center",
-    fontSize: 12,
-    color: "#4B535A",
+    fontSize: 15,
+    color: "#2D3035",
   },
   alert: {
     flexDirection: "row",
@@ -588,6 +589,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     borderRadius: 8,
     paddingVertical: 12,
+    backgroundColor: "#2D3035",
   },
   linksRow: {
     flexDirection: "row",
@@ -597,6 +599,7 @@ const styles = StyleSheet.create({
   link: {
     color: colors.ink,
     fontWeight: "700",
+    fontFamily: fontFamilies.semiBold,
   },
   legalText: {
     textAlign: "center",
@@ -606,6 +609,7 @@ const styles = StyleSheet.create({
   linkHighlight: {
     color: colors.brand,
     fontWeight: "700",
+    fontFamily: fontFamilies.semiBold,
   },
   otpRow: {
     flexDirection: "row",

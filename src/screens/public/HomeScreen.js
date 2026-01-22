@@ -1,5 +1,16 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import {
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +34,8 @@ import ModoIcon from "../../assets/image/wallets/campanas copia 5.svg";
 import NaranjaIcon from "../../assets/image/wallets/campanas copia 6.svg";
 import PersonalIcon from "../../assets/image/wallets/campanas copia 7.svg";
 import CuentaDniIcon from "../../assets/image/wallets/campanas copia 8.svg";
+import ArchivoIcon from "../../assets/image/archivo 1.svg";
+import BellIcon from "../../assets/image/campana-de-notificacion 1.svg";
 import { Calendar } from "react-native-calendars";
 import Screen from "../../components/Screen";
 import MobileHeader from "../../components/MobileHeader";
@@ -32,8 +45,9 @@ import Button from "../../components/Button";
 import EventListItem from "../../components/EventListItem";
 import Loading from "../../components/Loading";
 import { colors, fontFamilies, spacing } from "../../theme";
-import { getActiveBannerByCodeApi, getCategory, getFeaturedEvent, getSearchEvent, getState } from "../../services/api";
+import { getActiveBannerByCodeApi, getCategory, getEventById, getFeaturedEvent, getSearchEvent, getState } from "../../services/api";
 import { TAB_BAR_STYLE } from "../../navigation/tabBarStyle";
+import { getEventBasePriceValue, getMinTicketPrice } from "../../utils/price";
 
 
 const HomeScreen = ({ navigation }) => {
@@ -44,14 +58,16 @@ const HomeScreen = ({ navigation }) => {
   const [categories, setCategories] = useState([]);
   const [states, setStates] = useState([]);
   const [events, setEvents] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedState, setSelectedState] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [modal, setModal] = useState(null);
   const [pagination, setPagination] = useState({ currentPage: 1, totalPages: 1 });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [minPrices, setMinPrices] = useState({});
   const [payOpen, setPayOpen] = useState({ cards: false, wallets: false });
+  const [subscribeEmail, setSubscribeEmail] = useState("");
   const [isHomeDataLoaded, setIsHomeDataLoaded] = useState(false);
   const [isEventsLoaded, setIsEventsLoaded] = useState(false);
   const isSplashVisible = !isHomeDataLoaded || !isEventsLoaded;
@@ -102,29 +118,17 @@ const HomeScreen = ({ navigation }) => {
   useEffect(() => {
     const categoryId = route?.params?.categoryId;
     const stateId = route?.params?.stateId;
-    if (categoryId) setSelectedCategory(categoryId);
+    if (categoryId) setSelectedCategories([categoryId]);
     if (stateId) setSelectedState(stateId);
   }, [route?.params?.categoryId, route?.params?.stateId]);
 
   const categoryData = useMemo(() => categories.slice(0, 12), [categories]);
 
-  const getMinTicketPrice = (target) => {
-    if (!target) return undefined;
-    const list = Array.isArray(target.ticketTypes)
-      ? target.ticketTypes
-      : Array.isArray(target.tickettypes)
-      ? target.tickettypes
-      : [];
-    const prices = list
-      .map((ticket) => Number(ticket?.price ?? ticket?.amount ?? 0))
-      .filter((value) => Number.isFinite(value));
-    if (!prices.length) return undefined;
-    return Math.min(...prices);
-  };
-
   const getEventPriceValue = (event) => {
-    const minTicketPrice = getMinTicketPrice(event);
-    const basePrice = Number(event?.price ?? event?.amount ?? 0);
+    const id = event?._id || event?.id;
+    const minOverride = id ? minPrices[id] : undefined;
+    const minTicketPrice = Number.isFinite(minOverride) ? minOverride : getMinTicketPrice(event);
+    const basePrice = getEventBasePriceValue(event);
     if (Number.isFinite(minTicketPrice)) return minTicketPrice;
     if (Number.isFinite(basePrice)) return basePrice;
     return 0;
@@ -135,7 +139,10 @@ const HomeScreen = ({ navigation }) => {
     return list.filter((event) => {
       const categoryId = event?.categoryid || event?.categoryId || event?.category?._id || event?.category?.id;
       const stateId = event?.stateid || event?.stateId || event?.state?._id || event?.state?.id;
-      if (selectedCategory && String(categoryId) !== String(selectedCategory)) {
+      if (
+        selectedCategories.length &&
+        !selectedCategories.some((category) => String(category) === String(categoryId))
+      ) {
         return false;
       }
       if (selectedState && String(stateId) !== String(selectedState)) {
@@ -155,12 +162,13 @@ const HomeScreen = ({ navigation }) => {
       }
       return true;
     });
-  }, [events, selectedCategory, selectedState, selectedDate, priceRange]);
+  }, [events, selectedCategories, selectedState, selectedDate, priceRange, minPrices]);
 
   const fetchEvents = async (nextPage = 1, { append = false } = {}) => {
     try {
+      const activeCategory = selectedCategories.length === 1 ? selectedCategories[0] : "";
       const payload = {
-        categoryid: selectedCategory || "",
+        categoryid: activeCategory || "",
         statedid: selectedState || "",
         stateid: selectedState || "",
         stateId: selectedState || "",
@@ -187,8 +195,10 @@ const HomeScreen = ({ navigation }) => {
           });
           return merged;
         });
+        preloadMinPrices(list);
       } else {
         setEvents(list);
+        preloadMinPrices(list);
       }
       setPagination({
         currentPage: Number(pageInfo.currentPage || nextPage || 1),
@@ -202,9 +212,55 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const preloadMinPrices = async (eventsList) => {
+    const list = Array.isArray(eventsList) ? eventsList : [];
+    const pending = list.filter((event) => {
+      const id = event?._id || event?.id;
+      if (!id) return false;
+      if (minPrices[id] !== undefined) return false;
+      if (event?.isFree) return false;
+      const basePrice = getEventBasePriceValue(event);
+      const localMin = getMinTicketPrice(event);
+      if (Number.isFinite(localMin)) return false;
+      if (Number.isFinite(basePrice) && basePrice > 0) return false;
+      return true;
+    });
+    if (!pending.length) return;
+    try {
+      const pairs = await Promise.all(
+        pending.map(async (event) => {
+          const id = event?._id || event?.id;
+          try {
+            const res = await getEventById(id);
+            const info = res?.data?.info;
+            const eventData = info?.event || info || {};
+            const eventWithTypes = {
+              ...eventData,
+              ticketTypes: info?.ticketTypes ?? eventData?.ticketTypes,
+              tickettypes: info?.tickettypes ?? eventData?.tickettypes,
+            };
+            const min = getMinTicketPrice(eventWithTypes);
+            return [id, min];
+          } catch (err) {
+            return [id, null];
+          }
+        })
+      );
+      const updates = {};
+      pairs.forEach(([id, min]) => {
+        if (Number.isFinite(min)) updates[id] = min;
+      });
+      if (Object.keys(updates).length) {
+        setMinPrices((prev) => ({ ...prev, ...updates }));
+      }
+    } catch (err) {
+      console.error("Min price preload error", err);
+    }
+  };
+
   useEffect(() => {
     fetchEvents(1);
-  }, [selectedCategory, selectedState]);
+  }, [selectedCategories, selectedState]);
 
   const heroEvents = useMemo(() => {
     const list = featuredEvents.length ? featuredEvents : events;
@@ -220,13 +276,33 @@ const HomeScreen = ({ navigation }) => {
   }, [bannerSlides, heroEvents]);
 
   const hasFilters =
-    Boolean(selectedCategory || selectedState || selectedDate) || Boolean(priceRange.min || priceRange.max);
+    Boolean(selectedCategories.length || selectedState || selectedDate) || Boolean(priceRange.min || priceRange.max);
 
   const clearAllFilters = () => {
-    setSelectedCategory(null);
+    setSelectedCategories([]);
     setSelectedState(null);
     setSelectedDate(null);
     setPriceRange({ min: "", max: "" });
+  };
+
+  const selectedStateName = useMemo(() => {
+    if (!selectedState) return "";
+    const match = states.find((item) => String(item._id || item.id) === String(selectedState));
+    return match?.name || "";
+  }, [selectedState, states]);
+
+  const handleCategoryToggle = (categoryId) => {
+    setSelectedCategories((prev) => {
+      const list = Array.isArray(prev) ? prev : [];
+      const exists = list.some((item) => String(item) === String(categoryId));
+      if (exists) {
+        return list.filter((item) => String(item) !== String(categoryId));
+      }
+      if (list.length < 2) {
+        return [...list, categoryId];
+      }
+      return [list[1], categoryId];
+    });
   };
 
   const goTab = (tabName, params) => {
@@ -267,17 +343,30 @@ const HomeScreen = ({ navigation }) => {
         />
 
         <View style={styles.filtersRow}>
-          <Pressable style={styles.filterPill} onPress={() => setModal("location")}>
+          <Pressable
+            style={[styles.filterPill, selectedState && styles.filterPillActive]}
+            onPress={() => setModal("location")}
+          >
             <LocationIcon width={14} height={14} />
-            <AppText style={styles.filterLabel}>Ubicacion</AppText>
+            <AppText style={[styles.filterLabel, selectedState && styles.filterLabelActive]} numberOfLines={1}>
+              {selectedStateName || "Ubicacion"}
+            </AppText>
           </Pressable>
-          <Pressable style={styles.filterPill} onPress={() => setModal("date")}>
+          <Pressable style={[styles.filterPill, selectedDate && styles.filterPillActive]} onPress={() => setModal("date")}>
             <CalendarIcon width={14} height={14} />
-            <AppText style={styles.filterLabel}>Fecha</AppText>
+            <AppText style={[styles.filterLabel, selectedDate && styles.filterLabelActive]}>Fecha</AppText>
           </Pressable>
-          <Pressable style={styles.filterPill} onPress={() => setModal("price")}>
+          <Pressable
+            style={[
+              styles.filterPill,
+              (priceRange.min || priceRange.max) && styles.filterPillActive,
+            ]}
+            onPress={() => setModal("price")}
+          >
             <PriceIcon width={14} height={14} />
-            <AppText style={styles.filterLabel}>Precio</AppText>
+            <AppText style={[styles.filterLabel, (priceRange.min || priceRange.max) && styles.filterLabelActive]}>
+              Precio
+            </AppText>
           </Pressable>
         </View>
 
@@ -289,14 +378,14 @@ const HomeScreen = ({ navigation }) => {
             keyExtractor={(item) => item._id || item.id}
             contentContainerStyle={styles.categoryList}
             renderItem={({ item }) => {
-              const active = String(selectedCategory) === String(item._id || item.id);
+              const active = selectedCategories.some((category) => String(category) === String(item._id || item.id));
               const iconSrc = active
                 ? item.hoverimage || item.image || item.icon
                 : item.image || item.icon || item.hoverimage;
               return (
                 <Pressable
                   style={[styles.categoryCard, active && styles.categoryCardActive]}
-                  onPress={() => setSelectedCategory(active ? null : item._id || item.id)}
+                  onPress={() => handleCategoryToggle(item._id || item.id)}
                 >
                   {active ? (
                     <View style={styles.categoryClose}>
@@ -323,14 +412,24 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.eventsList}>
-          {filteredEvents.map((event) => (
-            <EventListItem
-              key={event._id || event.id}
-              event={event}
-              onPress={() => navigation.navigate("EventDetail", { id: event._id || event.id })}
-            />
-          ))}
-          {pagination.currentPage < pagination.totalPages ? (
+          {filteredEvents.length ? (
+            filteredEvents.map((event) => (
+              <EventListItem
+                key={event._id || event.id}
+                event={event}
+                minTicketPrice={minPrices[event._id || event.id]}
+                onPress={() => navigation.navigate("EventDetail", { id: event._id || event.id })}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <ArchivoIcon width={52} height={52} />
+              <AppText weight="bold" style={styles.emptyTitle}>
+                Lo siento! No se encontraron eventos
+              </AppText>
+            </View>
+          )}
+          {filteredEvents.length > 0 && pagination.currentPage < pagination.totalPages ? (
             <Button
               title={isLoadingMore ? "Cargando..." : "Ver mas"}
               variant="dark"
@@ -343,6 +442,32 @@ const HomeScreen = ({ navigation }) => {
             />
           ) : null}
         </View>
+
+        {filteredEvents.length === 0 ? (
+          <View style={styles.subscribeCard}>
+            <View style={styles.subscribeIcon}>
+              <BellIcon width={28} height={28} />
+            </View>
+            <AppText weight="bold" style={styles.subscribeTitle}>
+              No encontraste lo que buscabas?
+            </AppText>
+            <AppText style={styles.subscribeText}>
+              Suscribite y te avisamos apenas se encuentren disponibles los eventos que mas te interesan
+            </AppText>
+            <View style={styles.subscribeRow}>
+              <TextInput
+                value={subscribeEmail}
+                onChangeText={setSubscribeEmail}
+                placeholder="Email"
+                placeholderTextColor={colors.muted}
+                style={styles.subscribeInput}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <Button title="Suscribirse" variant="dark" style={styles.subscribeButton} onPress={() => {}} />
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.paySection}>
           <AppText weight="bold" style={styles.payTitle}>
@@ -408,18 +533,21 @@ const HomeScreen = ({ navigation }) => {
             </AppText>
             <FlatList
               data={states}
-              keyExtractor={(item) => item._id}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setSelectedState(item._id);
-                    setModal(null);
-                  }}
-                >
-                  <AppText>{item.name}</AppText>
-                </Pressable>
-              )}
+              keyExtractor={(item) => item._id || item.id}
+              renderItem={({ item }) => {
+                const isActive = String(item._id || item.id) === String(selectedState);
+                return (
+                  <Pressable
+                    style={[styles.modalItem, isActive && styles.modalItemActive]}
+                    onPress={() => {
+                      setSelectedState(item._id || item.id);
+                      setModal(null);
+                    }}
+                  >
+                    <AppText style={isActive && styles.modalItemTextActive}>{item.name}</AppText>
+                  </Pressable>
+                );
+              }}
             />
             <View style={styles.modalActions}>
               <Button title="Limpiar" variant="ghost" onPress={() => setSelectedState(null)} />
@@ -483,38 +611,46 @@ const HomeScreen = ({ navigation }) => {
 
       <Modal visible={modal === "price"} animationType="slide" transparent>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <AppText weight="bold" style={styles.modalTitle}>
-              Precio
-            </AppText>
-            <View style={styles.priceRow}>
-              <View style={styles.priceField}>
-                <AppText style={styles.priceLabel}>Min</AppText>
-                <TextInput
-                  value={priceRange.min}
-                  onChangeText={(value) => setPriceRange((prev) => ({ ...prev, min: value }))}
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  style={styles.priceInput}
-                />
+          <KeyboardAvoidingView
+            style={styles.modalKeyboard}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 24}
+          >
+            <ScrollView contentContainerStyle={styles.modalScroll} keyboardShouldPersistTaps="handled">
+              <View style={styles.modalCard}>
+                <AppText weight="bold" style={styles.modalTitle}>
+                  Precio
+                </AppText>
+                <View style={styles.priceRow}>
+                  <View style={styles.priceField}>
+                    <AppText style={styles.priceLabel}>Min</AppText>
+                    <TextInput
+                      value={priceRange.min}
+                      onChangeText={(value) => setPriceRange((prev) => ({ ...prev, min: value }))}
+                      keyboardType="number-pad"
+                      placeholder="0"
+                      style={styles.priceInput}
+                    />
+                  </View>
+                  <View style={styles.priceField}>
+                    <AppText style={styles.priceLabel}>Max</AppText>
+                    <TextInput
+                      value={priceRange.max}
+                      onChangeText={(value) => setPriceRange((prev) => ({ ...prev, max: value }))}
+                      keyboardType="number-pad"
+                      placeholder="50000"
+                      style={styles.priceInput}
+                    />
+                  </View>
+                </View>
+                <View style={styles.modalActions}>
+                  <Button title="Limpiar" variant="ghost" onPress={() => setPriceRange({ min: "", max: "" })} />
+                  <Button title="Cerrar" variant="ghost" onPress={() => setModal(null)} />
+                  <Button title="Aplicar" variant="dark" onPress={() => setModal(null)} />
+                </View>
               </View>
-              <View style={styles.priceField}>
-                <AppText style={styles.priceLabel}>Max</AppText>
-                <TextInput
-                  value={priceRange.max}
-                  onChangeText={(value) => setPriceRange((prev) => ({ ...prev, max: value }))}
-                  keyboardType="number-pad"
-                  placeholder="50000"
-                  style={styles.priceInput}
-                />
-              </View>
-            </View>
-            <View style={styles.modalActions}>
-              <Button title="Limpiar" variant="ghost" onPress={() => setPriceRange({ min: "", max: "" })} />
-              <Button title="Cerrar" variant="ghost" onPress={() => setModal(null)} />
-              <Button title="Aplicar" variant="dark" onPress={() => setModal(null)} />
-            </View>
-          </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </Screen>
@@ -539,11 +675,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
+    paddingHorizontal: 6,
+  },
+  filterPillActive: {
+    borderColor: colors.brand,
   },
   filterLabel: {
     fontSize: 12,
     fontWeight: "600",
     color: colors.ink,
+    flexShrink: 1,
+  },
+  filterLabelActive: {
+    color: "#2dd3035",
   },
   categoriesRow: {
     paddingHorizontal: spacing.lg,
@@ -616,8 +760,68 @@ const styles = StyleSheet.create({
   },
   eventsList: {
     paddingHorizontal: spacing.lg,
-    marginTop: spacing.lg,
+    marginTop: spacing.xxl,
     gap: 12,
+  },
+  emptyState: {
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    textAlign: "center",
+  },
+  subscribeCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: 18,
+    backgroundColor: "#F4F6FA",
+    alignItems: "center",
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: "#E6E9EF",
+  },
+  subscribeIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  subscribeTitle: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  subscribeText: {
+    fontSize: 12,
+    textAlign: "center",
+    color: colors.muted,
+  },
+  subscribeRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    alignItems: "center",
+    width: "100%",
+  },
+  subscribeInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E6E9EF",
+    paddingHorizontal: spacing.md,
+    fontSize: 12,
+    color: colors.ink,
+    backgroundColor: "#ffffff",
+    fontFamily: fontFamilies.regular,
+  },
+  subscribeButton: {
+    height: 40,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
   },
   moreButton: {
     alignSelf: "center",
@@ -686,13 +890,30 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: 60,
   },
+  modalKeyboard: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalScroll: {
+    flexGrow: 1,
+    justifyContent: "flex-end",
+  },
   modalTitle: {
     fontSize: 16,
   },
   modalItem: {
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: "#E7E7E7",
+  },
+  modalItemActive: {
+    backgroundColor: "#2D3035",
+    borderRadius: 10,
+    borderBottomColor: "transparent",
+  },
+  modalItemTextActive: {
+    color: "#ffffff",
   },
   modalActions: {
     flexDirection: "row",

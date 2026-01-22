@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from "react";
-import { Image, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, View } from "react-native";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
@@ -8,6 +8,7 @@ import SuccessIcon from "../../assets/image/las-compras-en-linea 1.svg";
 import ErrorIcon from "../../assets/image/xmarca 1.svg";
 
 const logo = require("../../assets/image/logo.e3c0b2196cc23f84f67a.png");
+const REDIRECT_DELAY_MS = 2500;
 
 const PaymentReturnScreen = ({ navigation, route }) => {
   const statusRaw = String(route?.params?.status || "").toLowerCase();
@@ -25,7 +26,7 @@ const PaymentReturnScreen = ({ navigation, route }) => {
         return;
       }
       navigation.navigate("Main", { screen: "HomeTab" });
-    }, 10000);
+    }, REDIRECT_DELAY_MS);
     return () => clearTimeout(timer);
   }, [isSuccess, navigation]);
 
@@ -60,9 +61,10 @@ const PaymentReturnScreen = ({ navigation, route }) => {
           </AppText>
           <AppText style={[styles.subtitle, isSuccess ? styles.subtitleSuccess : styles.subtitleError]}>
             {isSuccess
-              ? "En unos segundos te vamos a redirigir a Mis eventos donde vas a poder ver tus tickets."
-              : "El pago no fue aprobado. Podes intentarlo nuevamente."}
+              ? "Te estamos redirigiendo a Mis eventos. Obteniendo tu entrada..."
+              : "El pago no fue aprobado. Te estamos redirigiendo al inicio."}
           </AppText>
+          <ActivityIndicator size="small" color={isSuccess ? colors.brand : colors.ink} />
           <View style={styles.actions}>
             <Button
               title={isSuccess ? "Ir ahora" : "Volver al inicio"}
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
     height: 30,
   },
   container: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingVertical: 100,
     flexGrow: 1,
     alignItems: "center",
@@ -112,7 +114,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "100%",
-    maxWidth: 560,
+    maxWidth: 300,
     alignItems: "center",
     gap: spacing.md,
   },
@@ -122,7 +124,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   title: {
-    fontSize: 24,
+    fontSize: 16,
     textAlign: "center",
   },
   titleSuccess: {

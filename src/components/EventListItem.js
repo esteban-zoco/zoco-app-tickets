@@ -3,32 +3,20 @@ import { Image, Pressable, StyleSheet, View } from "react-native";
 import AppText from "./AppText";
 import { colors, spacing } from "../theme";
 import { formatDate, formatCurrency } from "../utils/format";
+import { getEventBasePriceValue, getMinTicketPrice } from "../utils/price";
 
-const EventListItem = ({ event, onPress }) => {
+const EventListItem = ({ event, onPress, minTicketPrice }) => {
   const image = event?.image || event?.banner || event?.cover;
   const title = event?.name || event?.title || "Evento";
   const location = event?.fulladdress || event?.venue || event?.location || "";
   const date = formatDate(event?.startDate || event?.date, "D MMM. - YYYY");
-  const getMinTicketPrice = (target) => {
-    if (!target) return undefined;
-    const list = Array.isArray(target.ticketTypes)
-      ? target.ticketTypes
-      : Array.isArray(target.tickettypes)
-      ? target.tickettypes
-      : [];
-    const prices = list
-      .map((ticket) => Number(ticket?.price ?? ticket?.amount ?? 0))
-      .filter((value) => Number.isFinite(value));
-    if (!prices.length) return undefined;
-    return Math.min(...prices);
-  };
-
-  const minTicketPrice = getMinTicketPrice(event);
-  const basePrice = Number(event?.price ?? event?.amount ?? 0);
+  const computedMinPrice = getMinTicketPrice(event);
+  const minPriceValue = Number.isFinite(minTicketPrice) ? minTicketPrice : computedMinPrice;
+  const basePrice = getEventBasePriceValue(event);
   const safeBasePrice = Number.isFinite(basePrice) ? basePrice : 0;
-  const priceValue = Number.isFinite(minTicketPrice) ? minTicketPrice : safeBasePrice;
+  const priceValue = Number.isFinite(minPriceValue) ? minPriceValue : safeBasePrice;
   const isFree = Boolean(event?.isFree) || priceValue <= 0;
-  const prefix = Number.isFinite(minTicketPrice) && (!basePrice || basePrice === 0) ? "Desde " : "";
+  const prefix = Number.isFinite(minPriceValue) && (!basePrice || basePrice === 0) ? "Desde " : "";
   const price = isFree ? "Gratis" : `${prefix}${formatCurrency(priceValue)}`;
 
   return (

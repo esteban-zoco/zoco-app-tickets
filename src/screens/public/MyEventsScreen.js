@@ -8,7 +8,7 @@ import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import Loading from "../../components/Loading";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
-import { colors, spacing } from "../../theme";
+import { colors, fontFamilies, spacing } from "../../theme";
 import { getMyEventsApi } from "../../services/api";
 import { useAuth } from "../../store/AuthContext";
 import CalendarIcon from "../../assets/image/calendario 1-white.svg";
@@ -241,6 +241,7 @@ const styles = StyleSheet.create({
   tabs: {
     gap: 8,
     paddingVertical: 4,
+    fontFamily: fontFamilies.semiBold,
   },
   tab: {
     borderRadius: 5,

@@ -10,8 +10,9 @@ import Button from "../../components/Button";
 import EventListItem from "../../components/EventListItem";
 import Loading from "../../components/Loading";
 import { colors, fontFamilies, spacing } from "../../theme";
-import { getCity, getSearchEvent } from "../../services/api";
+import { getCity, getEventById, getSearchEvent } from "../../services/api";
 import { formatDate } from "../../utils/format";
+import { getEventBasePriceValue, getMinTicketPrice } from "../../utils/price";
 
 const SearchScreen = ({ navigation }) => {
   const tabBarHeight = useBottomTabBarHeight();
@@ -22,6 +23,7 @@ const SearchScreen = ({ navigation }) => {
   const [selectedCity, setSelectedCity] = useState(null);
   const [modal, setModal] = useState(null);
   const [isEventsLoading, setIsEventsLoading] = useState(true);
+  const [minPrices, setMinPrices] = useState({});
 
   useEffect(() => {
     const load = async () => {
@@ -65,10 +67,57 @@ const SearchScreen = ({ navigation }) => {
         page += 1;
       } while (page <= totalPages);
       setEvents(all);
+      preloadMinPrices(all);
     } catch (err) {
       console.error("Search events error", err);
     } finally {
       setIsEventsLoading(false);
+    }
+  };
+
+  const preloadMinPrices = async (eventsList) => {
+    const list = Array.isArray(eventsList) ? eventsList : [];
+    const pending = list.filter((event) => {
+      const id = event?._id || event?.id;
+      if (!id) return false;
+      if (minPrices[id] !== undefined) return false;
+      if (event?.isFree) return false;
+      const basePrice = getEventBasePriceValue(event);
+      const localMin = getMinTicketPrice(event);
+      if (Number.isFinite(localMin)) return false;
+      if (Number.isFinite(basePrice) && basePrice > 0) return false;
+      return true;
+    });
+    if (!pending.length) return;
+    try {
+      const pairs = await Promise.all(
+        pending.map(async (event) => {
+          const id = event?._id || event?.id;
+          try {
+            const res = await getEventById(id);
+            const info = res?.data?.info;
+            const eventData = info?.event || info || {};
+            const eventWithTypes = {
+              ...eventData,
+              ticketTypes: info?.ticketTypes ?? eventData?.ticketTypes,
+              tickettypes: info?.tickettypes ?? eventData?.tickettypes,
+            };
+            const min = getMinTicketPrice(eventWithTypes);
+            return [id, min];
+          } catch (err) {
+            return [id, null];
+          }
+        })
+      );
+      const updates = {};
+      pairs.forEach(([id, min]) => {
+        if (Number.isFinite(min)) updates[id] = min;
+      });
+      if (Object.keys(updates).length) {
+        setMinPrices((prev) => ({ ...prev, ...updates }));
+      }
+    } catch (err) {
+      console.error("Min price preload error", err);
     }
   };
 
@@ -176,6 +225,7 @@ const SearchScreen = ({ navigation }) => {
               <EventListItem
                 key={event?._id || event?.id}
                 event={event}
+                minTicketPrice={minPrices[event?._id || event?.id]}
                 onPress={() => navigation.navigate("EventDetail", { id: event?._id || event?.id })}
               />
             ))}

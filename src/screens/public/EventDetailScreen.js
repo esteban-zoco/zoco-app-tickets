@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Image, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -24,6 +24,7 @@ import { colors, fontFamilies, spacing } from "../../theme";
 import { createOrderApi, getEventById } from "../../services/api";
 import { PAYMENT_BASE_URL } from "../../services/config";
 import { formatCurrency, formatDate } from "../../utils/format";
+import { getEventBasePriceValue, getTicketPriceValue } from "../../utils/price";
 import { useAuth } from "../../store/AuthContext";
 import { FISERV_CARD_OPTIONS, calculateInstallmentTotal } from "../../constants/fiservPaymentOptions";
 import { TAB_BAR_STYLE } from "../../navigation/tabBarStyle";
@@ -97,8 +98,9 @@ const EventDetailScreen = ({ navigation, route }) => {
         },
       ];
     }
-    const priceNum = Number(event?.price || 0);
-    if (Number.isFinite(priceNum) && priceNum > 0) {
+    const basePrice = getEventBasePriceValue(event);
+    const priceNum = Number.isFinite(basePrice) ? basePrice : 0;
+    if (priceNum > 0) {
       return [
         {
           id: "PAID_DEFAULT",
@@ -145,7 +147,8 @@ const EventDetailScreen = ({ navigation, route }) => {
   const total = useMemo(() => {
     return uiTicketTypes.reduce((sum, t) => {
       const qty = Number(quantities[t.id] || 0);
-      return sum + qty * Number(t.price || 0);
+      const price = getTicketPriceValue(t) ?? 0;
+      return sum + qty * price;
     }, 0);
   }, [quantities, uiTicketTypes]);
 
@@ -710,6 +713,7 @@ const EventDetailScreen = ({ navigation, route }) => {
             {uiTicketTypes.map((ticket, index) => {
               const isLast = index === uiTicketTypes.length - 1;
               const qty = Number(quantities[ticket.id] || 0);
+              const ticketPrice = getTicketPriceValue(ticket) ?? 0;
               const hasRemaining =
                 ticket.remaining !== null &&
                 typeof ticket.remaining !== "undefined" &&
@@ -735,7 +739,7 @@ const EventDetailScreen = ({ navigation, route }) => {
                       {ticket.name}
                     </AppText>
                     <AppText style={styles.ticketPrice}>
-                      {Number(ticket.price || 0) === 0 ? "Gratis" : formatCurrency(ticket.price)}
+                      {ticketPrice === 0 ? "Gratis" : formatCurrency(ticketPrice)}
                     </AppText>
                   </View>
                   {soldOut ? (
@@ -897,6 +901,15 @@ const EventDetailScreen = ({ navigation, route }) => {
                 disabled={isPaying || isOrderEmpty}
               />
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={isPaying} transparent animationType="fade">
+        <View style={styles.processingOverlay}>
+          <View style={styles.processingCard}>
+            <ActivityIndicator size="small" color={colors.brand} />
+            <AppText style={styles.processingText}>Obteniendo tu entrada...</AppText>
           </View>
         </View>
       </Modal>
@@ -1366,6 +1379,28 @@ const styles = StyleSheet.create({
   },
   paymentAction: {
     flex: 1,
+  },
+  processingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  processingCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    alignItems: "center",
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  processingText: {
+    fontSize: 14,
+    color: colors.ink,
+    fontFamily: fontFamilies.medium,
   },
   error: {
     color: colors.danger,
