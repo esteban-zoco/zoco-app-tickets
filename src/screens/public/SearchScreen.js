@@ -12,7 +12,7 @@ import Loading from "../../components/Loading";
 import { colors, fontFamilies, spacing } from "../../theme";
 import { getCity, getEventById, getSearchEvent } from "../../services/api";
 import { formatDate } from "../../utils/format";
-import { getEventBasePriceValue, getMinTicketPrice } from "../../utils/price";
+import { getMinTicketPrice } from "../../utils/price";
 
 const SearchScreen = ({ navigation }) => {
   const tabBarHeight = useBottomTabBarHeight();
@@ -82,10 +82,8 @@ const SearchScreen = ({ navigation }) => {
       if (!id) return false;
       if (minPrices[id] !== undefined) return false;
       if (event?.isFree) return false;
-      const basePrice = getEventBasePriceValue(event);
       const localMin = getMinTicketPrice(event);
       if (Number.isFinite(localMin)) return false;
-      if (Number.isFinite(basePrice) && basePrice > 0) return false;
       return true;
     });
     if (!pending.length) return;

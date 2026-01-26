@@ -219,10 +219,8 @@ const HomeScreen = ({ navigation }) => {
       if (!id) return false;
       if (minPrices[id] !== undefined) return false;
       if (event?.isFree) return false;
-      const basePrice = getEventBasePriceValue(event);
       const localMin = getMinTicketPrice(event);
       if (Number.isFinite(localMin)) return false;
-      if (Number.isFinite(basePrice) && basePrice > 0) return false;
       return true;
     });
     if (!pending.length) return;

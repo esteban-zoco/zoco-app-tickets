@@ -368,6 +368,18 @@ const EventDetailScreen = ({ navigation, route }) => {
     setTimeout(() => setWaitSaved(false), 3500);
   };
 
+  const hasDni = () => {
+    const cleaned = String(state.user?.dni || "").replace(/\D+/g, "");
+    return Boolean(cleaned);
+  };
+
+  const ensureDni = () => {
+    if (!state.isAuthenticated) return true;
+    if (hasDni()) return true;
+    setError("Necesitas agregar tu DNI en tu perfil para continuar.");
+    return false;
+  };
+
   const buildCheckoutPayload = () => {
     const entries = selectedEntries;
     const totalQty = entries.reduce((sum, [, qty]) => sum + Number(qty || 0), 0) || 1;
@@ -403,6 +415,7 @@ const EventDetailScreen = ({ navigation, route }) => {
   const openPaymentModal = () => {
     if (isOrderEmpty) return;
     setError("");
+    if (!ensureDni()) return;
     if (isFreeOrder) {
       setTicketModal(false);
       handlePaymentContinue();
@@ -420,6 +433,7 @@ const EventDetailScreen = ({ navigation, route }) => {
       goAuth();
       return;
     }
+    if (!ensureDni()) return;
     const context = buildCheckoutPayload();
     if (!context || !context.items.length) {
       setError("Selecciona al menos una entrada.");

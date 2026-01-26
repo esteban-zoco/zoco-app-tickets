@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Image, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
+import Base64 from "crypto-js/enc-base64";
+import Utf8 from "crypto-js/enc-utf8";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import Button from "../../components/Button";
@@ -24,6 +27,8 @@ const LoginScreen = ({ navigation }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
 
   const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
   const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
@@ -50,6 +55,20 @@ const LoginScreen = ({ navigation }) => {
     extraParams: { prompt: "select_account" },
     redirectUri: googleRedirectUri,
   });
+
+  const decodeAppleIdentityToken = (identityToken) => {
+    if (!identityToken) return null;
+    try {
+      const payload = identityToken.split(".")[1];
+      if (!payload) return null;
+      const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+      const padding = "=".repeat((4 - (normalized.length % 4)) % 4);
+      const json = Utf8.stringify(Base64.parse(`${normalized}${padding}`));
+      return JSON.parse(json);
+    } catch (err) {
+      return null;
+    }
+  };
 
   const goAfterLogin = () => {
     const root = navigation.getParent()?.getParent();
@@ -153,6 +172,24 @@ const LoginScreen = ({ navigation }) => {
     }
   }, [googleResponse]);
 
+  useEffect(() => {
+    let mounted = true;
+    if (Platform.OS !== "ios") {
+      setAppleAvailable(false);
+      return () => {};
+    }
+    AppleAuthentication.isAvailableAsync()
+      .then((available) => {
+        if (mounted) setAppleAvailable(available);
+      })
+      .catch(() => {
+        if (mounted) setAppleAvailable(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const handleGoogleLogin = async () => {
     if (!googleRequest) return;
     const missingClientId =
@@ -170,6 +207,61 @@ const LoginScreen = ({ navigation }) => {
     const result = await promptGoogleLogin({ useProxy: false, showInRecents: true });
     if (result.type !== "success") {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    if (!appleAvailable) {
+      setError("Apple no esta disponible en este dispositivo.");
+      return;
+    }
+    setAppleLoading(true);
+    setError("");
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      const tokenPayload = decodeAppleIdentityToken(credential.identityToken);
+      const fullName = credential.fullName || {};
+      const nameFromApple = [fullName.givenName, fullName.familyName].filter(Boolean).join(" ");
+      const email = credential.email || tokenPayload?.email;
+      const socialId = credential.user || tokenPayload?.sub;
+      const name = nameFromApple || tokenPayload?.name || email || "Apple User";
+      if (!email || !socialId) {
+        setError("No se pudo obtener los datos de Apple.");
+        return;
+      }
+      const response = await socialLoginApi({
+        email,
+        name,
+        social_id: socialId,
+        social_type: "apple",
+      });
+      if (response.status === 200) {
+        const info = response.data.info || {};
+        const userInfo = info.user || {};
+        await signIn({
+          accessToken: info.token,
+          refreshToken: info.refreshToken,
+          user: {
+            id: userInfo._id || userInfo.id,
+            email: userInfo.email,
+            name: userInfo.name,
+            role: userInfo.role,
+            dni: userInfo.dni,
+          },
+        });
+        goAfterLogin();
+      }
+    } catch (err) {
+      if (err?.code !== "ERR_CANCELED" && err?.code !== "ERR_APPLE_AUTHENTICATION_CANCELED") {
+        setError(err?.response?.data?.message || "No se pudo iniciar sesion con Apple.");
+      }
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -224,12 +316,14 @@ const LoginScreen = ({ navigation }) => {
             <AppText weight="semiBold">{googleLoading ? "Conectando..." : "Google"}</AppText>
           </View>
         </Pressable>
-        <Pressable style={styles.socialButton}>
-          <View style={styles.socialRow}>
-            <Ionicons name="logo-facebook" size={16} color={colors.ink} />
-            <AppText weight="semiBold">Facebook</AppText>
-          </View>
-        </Pressable>
+        {appleAvailable ? (
+          <Pressable style={styles.socialButton} onPress={handleAppleLogin} disabled={appleLoading}>
+            <View style={styles.socialRow}>
+              <Ionicons name="logo-apple" size={16} color={colors.ink} />
+              <AppText weight="semiBold">{appleLoading ? "Conectando..." : "Apple"}</AppText>
+            </View>
+          </Pressable>
+        ) : null}
       </View>
     </Screen>
   );

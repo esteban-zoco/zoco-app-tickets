@@ -44,13 +44,18 @@ const ChangePasswordScreen = ({ navigation }) => {
     }
     try {
       setSaving(true);
-      await changePasswordApi(null, { oldPassword: currentPassword, password: newPassword });
+      await changePasswordApi(null, {
+        currentPassword,
+        newPassword,
+        oldPassword: currentPassword,
+        password: newPassword,
+      });
       setStatus("Contraseña actualizada.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setError("No se pudo actualizar.");
+      setError(err?.response?.data?.message || "No se pudo actualizar.");
     } finally {
       setSaving(false);
     }
@@ -189,7 +194,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveButton: {
-    backgroundColor: colors.brand,
+    backgroundColor: "#2D3035",
     borderRadius: 5,
     height: 35,
     alignItems: "center",

@@ -19,8 +19,9 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.men7ar31.zocotickets",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -37,7 +38,8 @@
       "favicon": "./assets/store/logo.jpg"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

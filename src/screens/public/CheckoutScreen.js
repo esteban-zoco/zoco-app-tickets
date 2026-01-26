@@ -16,6 +16,11 @@ const CheckoutScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const hasDni = () => {
+    const cleaned = String(state.user?.dni || "").replace(/\D+/g, "");
+    return Boolean(cleaned);
+  };
+
   const fetchCart = async () => {
     try {
       setIsLoading(true);
@@ -38,6 +43,10 @@ const CheckoutScreen = ({ navigation }) => {
 
   const onCheckout = async () => {
     if (!cart.length) return;
+    if (!hasDni()) {
+      setError("Necesitas agregar tu DNI en tu perfil para continuar.");
+      return;
+    }
     setIsLoading(true);
     setError("");
     try {

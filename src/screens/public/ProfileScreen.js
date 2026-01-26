@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Screen from "../../components/Screen";
 import AppText from "../../components/AppText";
 import AuthRequiredScreen from "../auth/AuthRequiredScreen";
 import { colors, fontFamilies, spacing } from "../../theme";
-import { changePasswordApi, updateUserProfileApi } from "../../services/api";
+import { changePasswordApi, deleteAccountApi, updateUserProfileApi } from "../../services/api";
 import { useAuth } from "../../store/AuthContext";
 
 const ProfileScreen = () => {
@@ -14,6 +14,7 @@ const ProfileScreen = () => {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -43,6 +44,18 @@ const ProfileScreen = () => {
         setError("Completa todos los campos de contraseña.");
         return;
       }
+      if (newPassword.length < 8) {
+        setError("La contraseña nueva debe tener al menos 8 caracteres.");
+        return;
+      }
+      const pwHasUpper = /[A-Z]/.test(newPassword);
+      const pwHasLower = /[a-z]/.test(newPassword);
+      const pwHasNumber = /\d/.test(newPassword);
+      const pwHasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+      if (!(pwHasUpper && pwHasLower && pwHasNumber && pwHasSpecial)) {
+        setError("La contraseña debe contener mayúscula, minúscula, número y carácter especial.");
+        return;
+      }
       if (newPassword !== confirmPassword) {
         setError("Las contraseñas no coinciden.");
         return;
@@ -69,31 +82,64 @@ const ProfileScreen = () => {
 
       if (wantsPasswordChange) {
         try {
-          await changePasswordApi(null, { oldPassword: currentPassword, password: newPassword });
+          await changePasswordApi(null, {
+            currentPassword,
+            newPassword,
+            oldPassword: currentPassword,
+            password: newPassword,
+          });
           passwordOk = true;
           setCurrentPassword("");
           setNewPassword("");
           setConfirmPassword("");
         } catch (err) {
-          errors.push("No se pudo actualizar la contraseña.");
+          errors.push(err?.response?.data?.message || "No se pudo actualizar la contraseña.");
         }
       }
 
       if (errors.length) {
         setError(errors.join(" "));
       }
-      if (profileOk && passwordOk) {
-        setStatus("Listo! Actualizamos tus datos y contraseña.");
-      } else if (profileOk) {
-        setStatus("Listo! Actualizamos tus datos personales.");
-      } else if (passwordOk) {
-        setStatus("Contraseña actualizada.");
+      if (!(wantsPasswordChange && !passwordOk)) {
+        if (profileOk && passwordOk) {
+          setStatus("Listo! Actualizamos tus datos y contraseña.");
+        } else if (profileOk) {
+          setStatus("Listo! Actualizamos tus datos personales.");
+        } else if (passwordOk) {
+          setStatus("Contraseña actualizada.");
+        }
       }
     } catch (err) {
       setError("No se pudo actualizar.");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    setStatus("");
+    setError("");
+    try {
+      setDeleting(true);
+      const res = await deleteAccountApi(null);
+      if (res?.status === 200) {
+        await signOut();
+        return;
+      }
+      setError(res?.data?.message || "No se pudo eliminar la cuenta.");
+    } catch (err) {
+      setError(err?.response?.data?.message || "No se pudo eliminar la cuenta.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const onDeleteAccount = () => {
+    if (deleting) return;
+    Alert.alert("Eliminar cuenta", "Esta accion es permanente. Se eliminaran tus datos y acceso.", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Eliminar", style: "destructive", onPress: handleDeleteAccount },
+    ]);
   };
 
   return (
@@ -189,6 +235,14 @@ const ProfileScreen = () => {
           <Pressable style={styles.linkButton} onPress={signOut}>
             <AppText style={[styles.linkText, styles.logoutText]}>Cerrar sesion</AppText>
           </Pressable>
+
+          <Pressable
+            style={[styles.deleteButton, deleting && styles.deleteButtonDisabled]}
+            onPress={onDeleteAccount}
+            disabled={deleting}
+          >
+            <AppText style={styles.deleteText}>{deleting ? "Eliminando..." : "Eliminar cuenta"}</AppText>
+          </Pressable>
         </View>
       </ScrollView>
     </Screen>
@@ -272,6 +326,23 @@ const styles = StyleSheet.create({
   logoutText: {
     color: colors.danger,
   },
+  deleteButton: {
+    marginTop: 12,
+    height: 35,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteButtonDisabled: {
+    opacity: 0.6,
+  },
+  deleteText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontFamily: fontFamilies.semiBold,
+  },
   status: {
     color: "#4CAF50",
     fontSize: 12,
@@ -285,3 +356,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProfileScreen;
+

@@ -213,7 +213,7 @@ const AppNavigator = () => {
 
   if (state.isLoading) return <Loading />;
 
-  const initialRouteName = state.isAuthenticated ? "Main" : "Auth";
+  const initialRouteName = "Main";
   const authOptions = state.isAuthenticated ? { presentation: "modal" } : undefined;
 
   return (

@@ -68,6 +68,7 @@ export const getMyEventDetailApi = (token, eventId) => client.get(`/api/app/orde
 // Profile
 export const updateUserProfileApi = (token, data) => client.post("/api/app/user/updateprofile", data, withToken(token));
 export const changePasswordApi = (token, data) => client.post("/api/app/user/changepassword", data, withToken(token));
+export const deleteAccountApi = (token) => client.post("/api/app/user/deleteaccount", {}, withToken(token));
 
 // Banners
 export const getActiveBannersApi = () => client.get("/api/app/banners");

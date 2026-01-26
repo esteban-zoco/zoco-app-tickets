@@ -89,9 +89,7 @@ const RegisterScreen = ({ navigation }) => {
       nextErrors.confirmPassword = "Las contrasenas no coinciden";
     }
 
-    if (!form.dni.trim()) {
-      nextErrors.dni = "El DNI es obligatorio";
-    } else if (!/^\d{7,10}$/.test(form.dni.trim())) {
+    if (form.dni.trim() && !/^\d{7,10}$/.test(form.dni.trim())) {
       nextErrors.dni = "El DNI debe ser numerico (7 a 10 digitos)";
     }
 
@@ -108,13 +106,14 @@ const RegisterScreen = ({ navigation }) => {
     setLoading(true);
     setFormError("");
     try {
+      const dniValue = form.dni.trim();
       const payload = {
         name: form.username.trim(),
         email: form.email.trim(),
         password: form.password,
         confpassword: form.confirmPassword,
-        dni: form.dni.trim(),
       };
+      if (dniValue) payload.dni = dniValue;
       const response = await registerApi(payload);
       if (response.status === 200) {
         setSubmittedForm(payload);
@@ -419,7 +418,7 @@ const RegisterScreen = ({ navigation }) => {
         </View>
         <View>
           <TextInput
-            placeholder="DNI *"
+            placeholder="DNI (opcional)"
             value={form.dni}
             onChangeText={(value) => updateForm("dni", value)}
             keyboardType="number-pad"
